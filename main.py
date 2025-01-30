@@ -2,14 +2,6 @@ import time
 import requests
 from datetime import date, timedelta
 
-def PrintIchimoku(Ticker, data, file):
-    if (data[0] > data[1]):
-        LogAndOutput(
-            f"(+) {Ticker} is a buy, with Kijunsen(${data[1]}) being ${data[0] - data[1]} below Tenkansen(${data[0]}).", file)
-    else:
-        LogAndOutput(
-            f"(-) {Ticker} is a sell, with Kijunsen(${data[1]}) being ${data[1] - data[0]} above Tenkansen(${data[0]}).", file)
-
 def ParseData(results):
     dates = [result['t'] for result in results]
     closing_prices = [result['c'] for result in results]
@@ -19,16 +11,6 @@ def ParseData(results):
     dates = [str(date.fromtimestamp(d / 1000)) for d in dates]
 
     return [dates, closing_prices, open_prices, high_prices, low_prices]
-
-def CalculateIchimoku(data):
-
-    TenkanSen = (max(data[1][-10:-1]) + min(data[1][-10:-1])) / 2
-    KijunSen = (max(data[1][-27:-1]) + min(data[1][-27:-1])) / 2
-    ChikouSpan = data[1][-1]
-    SenkouSpanA = (TenkanSen + KijunSen) / 2
-    SenkouSpanB = (max(data[1]) + min(data[1])) / 2
-
-    return [TenkanSen, KijunSen, ChikouSpan, SenkouSpanA, SenkouSpanB]
 
 def PrintRSI(Ticker, rsi, file):
     if(rsi <= 35):
@@ -103,11 +85,9 @@ for i, Ticker in enumerate(TickerList):
         continue
 
     data = ParseData(results)
-    ichimoku = CalculateIchimoku(data)
     rsi = CalculateRSI(data)
     macd, macdsignal = CalculateMACD(data)
 
-    PrintIchimoku(Ticker, ichimoku, file)
     PrintRSI(Ticker, rsi, file)
     PrintMACD(Ticker, macd, macdsignal, file)
     LogAndOutput("*"*200, file)
