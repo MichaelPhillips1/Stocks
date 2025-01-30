@@ -1,6 +1,9 @@
 import time
+from itertools import accumulate
+
 import requests
 from datetime import date, timedelta
+import statistics
 
 def ParseData(results):
     dates = [result['t'] for result in results]
@@ -12,13 +15,9 @@ def ParseData(results):
 
     return [dates, closing_prices, open_prices, high_prices, low_prices]
 
-def PrintRSI(Ticker, rsi, file):
-    if(rsi <= 35):
-        LogAndOutput(f"(+) {Ticker} is a buy, with an rsi <= 35 at {rsi}.", file)
-    elif(rsi >= 65):
-        LogAndOutput(f"(-) {Ticker} is a sell, with an rsi >= 65 at {rsi}.", file)
-    else:
-        LogAndOutput(f"(?) {Ticker} could be trending either direction, with an rsi of {rsi}.", file)
+def LogAndOutput(information, file):
+    file.write(information + "\n")
+    print(information)
 
 def CalculateRSI(data):
     closing_prices = data[1][-(15 + 1):]
@@ -57,9 +56,41 @@ def CalculateMACD(data):
 
     return macd_line, signal_line
 
-def LogAndOutput(information, file):
-    file.write(information + "\n")
-    print(information)
+
+def calculate_bollinger_bands(data, window_size=20, num_std_dev=2):
+
+    moving_avg = []
+    upper_band = []
+    lower_band = []
+
+    for i in range(len(data[1]) - window_size + 1):
+        window = data[1][i:i + window_size]
+        avg = sum(window) / window_size
+        std_dev = statistics.stdev(window)
+
+        moving_avg.append(avg)
+        upper_band.append(avg + num_std_dev * std_dev)
+        lower_band.append(avg - num_std_dev * std_dev)
+
+    upper_lower_distance = []
+
+    for i, element in enumerate(upper_band):
+        upper_lower_distance.append(element - lower_band[i])
+
+    avg_upper_lower_distance = sum(upper_lower_distance) / len(upper_band)
+
+    print(upper_lower_distance)
+    print(avg_upper_lower_distance)
+
+    return moving_avg, upper_band, lower_band, upper_lower_distance, avg_upper_lower_distance
+
+def PrintRSI(Ticker, rsi, file):
+    if(rsi <= 35):
+        LogAndOutput(f"(+) {Ticker} is a buy, with an rsi <= 35 at {rsi}.", file)
+    elif(rsi >= 65):
+        LogAndOutput(f"(-) {Ticker} is a sell, with an rsi >= 65 at {rsi}.", file)
+    else:
+        LogAndOutput(f"(?) {Ticker} could be trending either direction, with an rsi of {rsi}.", file)
 
 def PrintMACD(Ticker, macd, macdsignal, file):
     if(macd[-2] < macdsignal[-2] and macd[-1] > macdsignal[-1]):
@@ -75,8 +106,8 @@ TickerList = ["AAPL", "MSFT", "TSLA", "GOOGL", "NVDA", "META", "IBM", "NFLX", "A
 CurrentDate = date.today()
 PreviousDate = CurrentDate - timedelta(days=100)
 file = open(f"{CurrentDate.isoformat()}.txt", "w")
-
 LogAndOutput("*" * 200, file)
+
 for i, Ticker in enumerate(TickerList):
     try:
         request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/{Ticker}/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC")
@@ -87,6 +118,7 @@ for i, Ticker in enumerate(TickerList):
     data = ParseData(results)
     rsi = CalculateRSI(data)
     macd, macdsignal = CalculateMACD(data)
+    bollinger_moving_avg, bollinger_upper_band, bollinger_lower_band, bollinger_upper_lower_distance, bollinger_avg_upper_lower_distance = calculate_bollinger_bands(data)
 
     PrintRSI(Ticker, rsi, file)
     PrintMACD(Ticker, macd, macdsignal, file)
