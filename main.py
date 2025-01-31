@@ -79,9 +79,6 @@ def calculate_bollinger_bands(data, window_size=20, num_std_dev=2):
 
     avg_upper_lower_distance = sum(upper_lower_distance) / len(upper_band)
 
-    print(upper_lower_distance)
-    print(avg_upper_lower_distance)
-
     return moving_avg, upper_band, lower_band, upper_lower_distance, avg_upper_lower_distance
 
 def PrintRSI(Ticker, rsi, file):
@@ -102,10 +99,16 @@ def PrintMACD(Ticker, macd, macdsignal, file):
     else:
         LogAndOutput(f"(+) {Ticker} MACD remains above signal by {macd[-1] - macdsignal[-1]} with a slope of {(macd[-1] - macd[-2]) / 2}.", file)
 
+def PrintBollingerBands(Ticker, bollinger_upper_lower_distance, bollinger_avg_upper_lower_distance, file):
+    if(bollinger_upper_lower_distance[-1] / bollinger_avg_upper_lower_distance < .5):
+        LogAndOutput(f"(*) {Ticker} bollinger band gap is narrowed to %{100 * (bollinger_upper_lower_distance[-1] / bollinger_avg_upper_lower_distance)} average, indicating movement.", file)
+    else:
+        LogAndOutput(f"(*) {Ticker} bollinger band gap remains at a %{100 * (bollinger_upper_lower_distance[-1] / bollinger_avg_upper_lower_distance)} average, not indicating movement.", file)
+
 TickerList = ["AAPL", "MSFT", "TSLA", "GOOGL", "NVDA", "META", "IBM", "NFLX", "AVGO", "UBER"]
 CurrentDate = date.today()
 PreviousDate = CurrentDate - timedelta(days=100)
-file = open(f"{CurrentDate.isoformat()}.txt", "w")
+file = open(f"{CurrentDate.isoformat()}-Stocks.txt", "w")
 LogAndOutput("*" * 200, file)
 
 for i, Ticker in enumerate(TickerList):
@@ -122,6 +125,7 @@ for i, Ticker in enumerate(TickerList):
 
     PrintRSI(Ticker, rsi, file)
     PrintMACD(Ticker, macd, macdsignal, file)
+    PrintBollingerBands(Ticker, bollinger_upper_lower_distance, bollinger_avg_upper_lower_distance, file)
     LogAndOutput("*"*200, file)
 
     if(i != len(TickerList)-1):
