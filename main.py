@@ -1,9 +1,9 @@
 import time
-from itertools import accumulate
-
 import requests
-from datetime import date, timedelta
-import statistics
+import datetime
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+plt.switch_backend('TkAgg')
 
 def ParseData(results):
     dates = [result['t'] for result in results]
@@ -11,124 +11,61 @@ def ParseData(results):
     high_prices = [result['h'] for result in results]
     low_prices = [result['l'] for result in results]
     open_prices = [result['o'] for result in results]
-    dates = [str(date.fromtimestamp(d / 1000)) for d in dates]
 
     return [dates, closing_prices, open_prices, high_prices, low_prices]
 
-def LogAndOutput(information, file):
-    file.write(information + "\n")
-    print(information)
+def CalculateRSI(closing_prices, period = 14):
 
-def CalculateRSI(data):
-    closing_prices = data[1][-(15 + 1):]
+    totalRSI = []
+
     price_changes = [closing_prices[i] - closing_prices[i - 1] for i in range(1, len(closing_prices))]
+    gains = [max(change, 0) for change in price_changes]
+    losses = [-min(change, 0) for change in price_changes]
 
-    gains = [change if change > 0 else 0 for change in price_changes]
-    losses = [-change if change < 0 else 0 for change in price_changes]
+    alpha = 1 / period
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
 
-    avg_gain = sum(gains) / 14
-    avg_loss = sum(losses) / 14
-    for i in range(14, len(price_changes)):
-        avg_gain = ((avg_gain * (14 - 1)) + gains[i]) / 14
-        avg_loss = ((avg_loss * (14 - 1)) + losses[i]) / 14
+    for i in range(period, len(closing_prices) - 1):
+        current_gain = gains[i]
+        current_loss = losses[i]
 
-    if avg_loss == 0:
-        rs = 100
-    else:
-        rs = avg_gain / avg_loss
+        avg_gain = (alpha * current_gain) + ((1 - alpha) * avg_gain)
+        avg_loss = (alpha * current_loss) + ((1 - alpha) * avg_loss)
 
-    rsi = 100 - (100 / (1 + rs))
-    return round(rsi, 2)
+        if avg_loss == 0:
+            rs = 100
+        else:
+            rs = avg_gain / avg_loss
 
-def CalculateMACD(data):
-    def ema(prices, period):
-        ema_values = [prices[0]]
-        alpha = 2 / (period + 1)
-        for price in prices[1:]:
-            ema_values.append((price * alpha) + (ema_values[-1] * (1 - alpha)))
-        return ema_values
+        totalRSI.append(100 - (100 / (1 + rs)))
 
-    short_ema = ema(data[1], 12)
-    long_ema = ema(data[1], 26)
+    return totalRSI
 
-    macd_line = [s - l for s, l in zip(short_ema, long_ema)]
-    signal_line = ema(macd_line, 9)
-
-    return macd_line, signal_line
-
-
-def calculate_bollinger_bands(data, window_size=20, num_std_dev=2):
-
-    moving_avg = []
-    upper_band = []
-    lower_band = []
-
-    for i in range(len(data[1]) - window_size + 1):
-        window = data[1][i:i + window_size]
-        avg = sum(window) / window_size
-        std_dev = statistics.stdev(window)
-
-        moving_avg.append(avg)
-        upper_band.append(avg + num_std_dev * std_dev)
-        lower_band.append(avg - num_std_dev * std_dev)
-
-    upper_lower_distance = []
-
-    for i, element in enumerate(upper_band):
-        upper_lower_distance.append(element - lower_band[i])
-
-    avg_upper_lower_distance = sum(upper_lower_distance) / len(upper_band)
-
-    return moving_avg, upper_band, lower_band, upper_lower_distance, avg_upper_lower_distance
-
-def PrintRSI(Ticker, rsi, file):
-    if(rsi <= 35):
-        LogAndOutput(f"(+) {Ticker} is a buy, with an rsi <= 35 at {rsi}.", file)
-    elif(rsi >= 65):
-        LogAndOutput(f"(-) {Ticker} is a sell, with an rsi >= 65 at {rsi}.", file)
-    else:
-        LogAndOutput(f"(?) {Ticker} could be trending either direction, with an rsi of {rsi}.", file)
-
-def PrintMACD(Ticker, macd, macdsignal, file):
-    if(macd[-2] < macdsignal[-2] and macd[-1] > macdsignal[-1]):
-        LogAndOutput(f"(+) {Ticker} is a buy, with MACD crossing above, signaling buy.", file)
-    elif(macd[-2] > macdsignal[-2] and macd[-1] < macdsignal[-1]):
-        LogAndOutput(f"(-) {Ticker} is a sell, with MACD crossing below, signaling sell.", file)
-    if(macd[-1] < macdsignal[-1]):
-        LogAndOutput(f"(-) {Ticker} MACD remains below signal by {macdsignal[-1] - macd[-1]} with a slope of {(macd[-1] - macd[-2])/2}.", file)
-    else:
-        LogAndOutput(f"(+) {Ticker} MACD remains above signal by {macd[-1] - macdsignal[-1]} with a slope of {(macd[-1] - macd[-2]) / 2}.", file)
-
-def PrintBollingerBands(Ticker, bollinger_upper_lower_distance, bollinger_avg_upper_lower_distance, file):
-    if(bollinger_upper_lower_distance[-1] / bollinger_avg_upper_lower_distance < .5):
-        LogAndOutput(f"(*) {Ticker} bollinger band gap is narrowed to %{100 * (bollinger_upper_lower_distance[-1] / bollinger_avg_upper_lower_distance)} average, indicating movement.", file)
-    else:
-        LogAndOutput(f"(*) {Ticker} bollinger band gap remains at a %{100 * (bollinger_upper_lower_distance[-1] / bollinger_avg_upper_lower_distance)} average, not indicating movement.", file)
-
-TickerList = ["AAPL", "MSFT", "TSLA", "GOOGL", "NVDA", "META", "IBM", "NFLX", "AVGO", "UBER"]
-CurrentDate = date.today()
-PreviousDate = CurrentDate - timedelta(days=100)
-file = open(f"{CurrentDate.isoformat()}-Stocks.txt", "w")
-LogAndOutput("*" * 200, file)
-
-for i, Ticker in enumerate(TickerList):
+while True:
+    CurrentDate = datetime.date.today()
+    PreviousDate = CurrentDate - datetime.timedelta(days=1)
     try:
-        request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/{Ticker}/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC")
-        results = request.json()['results'][-53:]
+        request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/X:BTCUSD/range/1/hour/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
+        data = ParseData(request)
     except:
+        time.sleep(15)
         continue
 
-    data = ParseData(results)
-    rsi = CalculateRSI(data)
-    macd, macdsignal = CalculateMACD(data)
-    bollinger_moving_avg, bollinger_upper_band, bollinger_lower_band, bollinger_upper_lower_distance, bollinger_avg_upper_lower_distance = calculate_bollinger_bands(data)
+    formatted_times = [
+        datetime.datetime.fromtimestamp(ts / 1000).strftime('%m/%d/%Y %H:%M') for ts in data[0]
+    ]
+    rsi = CalculateRSI(data[1], 9)
+    for i in range(len(rsi)):
+        print(f"Time: {formatted_times[(-len(rsi)):][i]}, Price: {data[1][(-len(rsi)):][i]}, RSI: {rsi[(-len(rsi)) + i]}")
 
-    PrintRSI(Ticker, rsi, file)
-    PrintMACD(Ticker, macd, macdsignal, file)
-    PrintBollingerBands(Ticker, bollinger_upper_lower_distance, bollinger_avg_upper_lower_distance, file)
-    LogAndOutput("*"*200, file)
+    #According to sales rep, without premium memebrhsip you are limited to x queries per minute, with only previous trading day data available.
+    #Once a membership is purchased however, there are endless queries per minute, with finer scopes such as 1 minute being allowed, and best of all
+    #You are able to get the CURRENT market data, so the query in this code for 1 hour would return the hour of for THIS trading day, the final
+    #Trading hour for yesterday
 
-    if(i != len(TickerList)-1):
-        time.sleep(15)
+    print(datetime.datetime.fromtimestamp(data[0][-1] / 1000).strftime('%m/%d/%Y %H:%M'), "Latest time stamp")
 
-file.close()
+    plt.plot(([i+1 for i in range(len(rsi))]), rsi, marker='o', linestyle='-', color='b', label='RSI')
+    plt.show()
+    time.sleep(15)
