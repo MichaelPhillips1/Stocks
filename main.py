@@ -2,7 +2,6 @@ import time
 import requests
 import datetime
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 plt.switch_backend('TkAgg')
 
 def ParseData(results):
@@ -44,18 +43,20 @@ def CalculateRSI(closing_prices, period = 14):
 
 while True:
     CurrentDate = datetime.date.today()
-    PreviousDate = CurrentDate - datetime.timedelta(days=1)
+    PreviousDate = CurrentDate - datetime.timedelta(days=7*52*2)
     try:
-        request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/X:BTCUSD/range/1/hour/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
+        request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/X:BTCUSD/range/1/week/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
         data = ParseData(request)
     except:
         time.sleep(15)
         continue
 
+    period = 14
+    rsi = CalculateRSI(data[1], period)
+
     formatted_times = [
         datetime.datetime.fromtimestamp(ts / 1000).strftime('%m/%d/%Y %H:%M') for ts in data[0]
     ]
-    rsi = CalculateRSI(data[1], 9)
     for i in range(len(rsi)):
         print(f"Time: {formatted_times[(-len(rsi)):][i]}, Price: {data[1][(-len(rsi)):][i]}, RSI: {rsi[(-len(rsi)) + i]}")
 
@@ -66,6 +67,12 @@ while True:
 
     print(datetime.datetime.fromtimestamp(data[0][-1] / 1000).strftime('%m/%d/%Y %H:%M'), "Latest time stamp")
 
-    plt.plot(([i+1 for i in range(len(rsi))]), rsi, marker='o', linestyle='-', color='b', label='RSI')
+    fig, axs = plt.subplots(2, 1)
+    axs[0].plot(([i+1 for i in range(len(rsi))]), data[1][period + 1:])
+    axs[0].xlabel("Week")
+    axs[0].ylabel("Price")
+    axs[1].plot(([i+1 for i in range(len(rsi))]), rsi, marker='o', linestyle='-', color='b', label='RSI')
+    axs[1].xlabel("Week")
+    axs[1].ylabel("RSI")
     plt.show()
     time.sleep(15)
