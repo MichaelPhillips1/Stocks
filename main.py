@@ -45,28 +45,30 @@ while True:
     CurrentDate = datetime.date.today()
     PreviousDate = CurrentDate - datetime.timedelta(days=7 * 35)
     try:
-        request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/NVDA/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
+        request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/HL/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
         data = ParseData(request)
     except:
         time.sleep(15)
         continue
 
-    period=5
-    rsi = CalculateRSI(data[1], period)
+    currentData = data[1]
+    currentData.append(6.10) #Current price for hl, change for security
 
+    period=20
+    rsi = CalculateRSI(currentData, period)
     formatted_times = [
         datetime.datetime.fromtimestamp(ts / 1000).strftime('%m/%d/%Y %H:%M') for ts in data[0]
     ]
+
     for i in range(len(rsi)):
         print(f"Time: {formatted_times[(-len(rsi)):][i]}, Price: {data[1][(-len(rsi)):][i]}, RSI: {rsi[(-len(rsi)) + i]}")
-
     print(datetime.datetime.fromtimestamp(data[0][-1] / 1000).strftime('%m/%d/%Y %H:%M'), "Latest time stamp")
 
     fig, axs = plt.subplots(2, 1)
-    axs[0].plot([i+1 for i in range(len(rsi))], data[1][period + 1:])
+    axs[0].plot([i for i in range(len(data[1]))], data[1])
     axs[0].set_xlabel("Time Scale")
     axs[0].set_ylabel("Price")
-    axs[1].plot([i+1 for i in range(len(rsi))], rsi, marker='o', linestyle='-', color='b', label='RSI')
+    axs[1].plot([i for i in range(len(rsi))], rsi, marker='o', linestyle='-', color='b', label='RSI')
     axs[1].set_xlabel("Time Scale")
     axs[1].set_ylabel("RSI")
     plt.show()
