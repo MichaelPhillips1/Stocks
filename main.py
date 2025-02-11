@@ -3,6 +3,7 @@ import requests
 import datetime
 import matplotlib.pyplot as plt
 plt.switch_backend('TkAgg')
+plt.style.use('dark_background')
 
 def ParseData(results):
     dates = [result['t'] for result in results]
@@ -41,35 +42,43 @@ def CalculateRSI(closing_prices, period = 14):
 
     return totalRSI
 
-while True:
-    CurrentDate = datetime.date.today()
-    PreviousDate = CurrentDate - datetime.timedelta(days=7 * 35)
+tickers = ["HL", "AMZN", "AAPL", "NFLX", "NVDA", "PLTR"]
+CurrentDate = datetime.date.today()
+PreviousDate = CurrentDate - datetime.timedelta(days=7 * 35)
+
+for ticker in tickers:
     try:
-        request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/X:BTCUSD/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
+        request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
         data = ParseData(request)
     except:
         time.sleep(15)
         continue
 
-    currentData = data[1]
-    currentData.append(6.19) #Current price for hl, change for security
+    while True:
+        try:
+            currentPrice = float(input(f"Please enter the current days price for {ticker}: "))
+            currentData = data[1]
+            currentData.append(currentPrice)
+            break
+        except:
+            continue
 
-    period=10
+    period=14
     rsi = CalculateRSI(currentData, period)
-    formatted_times = [
-        datetime.datetime.fromtimestamp(ts / 1000).strftime('%m/%d/%Y %H:%M') for ts in data[0]
-    ]
 
-    for i in range(len(rsi)):
-        print(f"Time: {formatted_times[(-len(rsi)):][i]}, Price: {data[1][(-len(rsi)):][i]}, RSI: {rsi[(-len(rsi)) + i]}")
-    print(datetime.datetime.fromtimestamp(data[0][-1] / 1000).strftime('%m/%d/%Y %H:%M'), "Latest time stamp")
-
-    fig, axs = plt.subplots(2, 1)
+    fig, axs = plt.subplots(2, 1, figsize=(10, 8))
     axs[0].plot([i for i in range(len(data[1]))], data[1])
-    axs[0].set_xlabel("Time Scale")
+    axs[0].set_xlabel("Time Scale (Days)")
     axs[0].set_ylabel("Price")
-    axs[1].plot([i + period + 1 for i in range(len(rsi))], rsi, marker='o', linestyle='-', color='b', label='RSI')
-    axs[1].set_xlabel("Time Scale")
+
+    axs[1].plot([i + period + 1 for i in range(len(rsi))], rsi)
+    axs[1].set_xlabel("Time Scale (Days)")
     axs[1].set_ylabel("RSI")
-    plt.show()
+
+    axs[1].axhline(70, color='red', linestyle='--', label='Threshold 70')
+    axs[1].axhline(30, color='green', linestyle='--', label='Threshold 30')
+    axs[1].fill_between([i + period + 1 for i in range(len(rsi))], 70, 100, color='red', alpha=0.1)
+    axs[1].fill_between([i + period + 1 for i in range(len(rsi))], 0, 30, color='green', alpha=0.1)
+
+    plt.savefig(f"Charts/{ticker}_{CurrentDate}.png")
     time.sleep(15)
