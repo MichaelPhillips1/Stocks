@@ -45,16 +45,16 @@ while True:
     CurrentDate = datetime.date.today()
     PreviousDate = CurrentDate - datetime.timedelta(days=7 * 35)
     try:
-        request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/HL/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
+        request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/X:BTCUSD/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
         data = ParseData(request)
     except:
         time.sleep(15)
         continue
 
     currentData = data[1]
-    currentData.append(6.10) #Current price for hl, change for security
+    currentData.append(6.19) #Current price for hl, change for security
 
-    period=20
+    period=10
     rsi = CalculateRSI(currentData, period)
     formatted_times = [
         datetime.datetime.fromtimestamp(ts / 1000).strftime('%m/%d/%Y %H:%M') for ts in data[0]
@@ -68,7 +68,7 @@ while True:
     axs[0].plot([i for i in range(len(data[1]))], data[1])
     axs[0].set_xlabel("Time Scale")
     axs[0].set_ylabel("Price")
-    axs[1].plot([i for i in range(len(rsi))], rsi, marker='o', linestyle='-', color='b', label='RSI')
+    axs[1].plot([i + period + 1 for i in range(len(rsi))], rsi, marker='o', linestyle='-', color='b', label='RSI')
     axs[1].set_xlabel("Time Scale")
     axs[1].set_ylabel("RSI")
     plt.show()
