@@ -42,6 +42,23 @@ def CalculateRSI(closing_prices, period = 14):
 
     return totalRSI
 
+def calculateBollingerBands(prices, period=14, num_std_dev=2):
+    rolling_mean = []
+    rolling_std = []
+
+    for i in range(len(prices) - period + 1):
+        window_prices = prices[i:i + period]
+        mean = sum(window_prices) / period
+        std_dev = (sum((p - mean) ** 2 for p in window_prices) / (period - 1)) ** 0.5  # Sample std dev
+
+        rolling_mean.append(mean)
+        rolling_std.append(std_dev)
+
+    upper_band = [m + (num_std_dev * s) for m, s in zip(rolling_mean, rolling_std)]
+    lower_band = [m - (num_std_dev * s) for m, s in zip(rolling_mean, rolling_std)]
+
+    return [rolling_mean, upper_band, lower_band]
+
 tickers = ["HL", "AMZN", "AAPL", "NFLX", "NVDA", "PLTR"]
 CurrentDate = datetime.date.today()
 PreviousDate = CurrentDate - datetime.timedelta(days=7 * 35)
@@ -54,31 +71,49 @@ for ticker in tickers:
         time.sleep(15)
         continue
 
+    #Collect current days price (looking for api workaround)
     while True:
         try:
             currentPrice = float(input(f"Please enter the current days price for {ticker}: "))
-            currentData = data[1]
-            currentData.append(currentPrice)
+            currentPriceData = data[1]
+            currentPriceData.append(currentPrice)
             break
         except:
             continue
 
-    period=14
-    rsi = CalculateRSI(currentData, period)
+    # Set parameters for indicators
+    periodRSI=14
+    periodBollinger=14
+    stdDevBollinger = 2
+    # Calculate indicators
+    rsi = CalculateRSI(currentPriceData, periodRSI)
+    bollinger = calculateBollingerBands(currentPriceData, periodBollinger, stdDevBollinger)
 
+    # Figure for plots
     fig, axs = plt.subplots(2, 1, figsize=(10, 8))
-    axs[0].plot([i for i in range(len(data[1]))], data[1])
+    # Plot stock prices
+    axs[0].plot([i for i in range(len(currentPriceData))], currentPriceData)
+    # Plot bollingers over the prices
+    axs[0].plot([i + periodBollinger - 1 for i in range(len(bollinger[0]))], bollinger[0], color='green')
+    axs[0].plot([i + periodBollinger - 1 for i in range(len(bollinger[1]))], bollinger[1], color='red')
+    axs[0].plot([i + periodBollinger - 1 for i in range(len(bollinger[2]))], bollinger[2], color='red')
+    # Set the scale labels of the graph
     axs[0].set_xlabel("Time Scale (Days)")
     axs[0].set_ylabel("Price")
 
-    axs[1].plot([i + period + 1 for i in range(len(rsi))], rsi)
+    # Plot the RSI
+    axs[1].plot([i + periodRSI + 1 for i in range(len(rsi))], rsi)
+    # Set bounds for overbought and oversold
+    axs[1].axhline(70, color='red', linestyle='--', label='Threshold 70')
+    axs[1].axhline(30, color='green', linestyle='--', label='Threshold 30')
+    # Share in areas for overbought and oversold
+    axs[1].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 70, 100, color='red', alpha=0.1)
+    axs[1].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 0, 30, color='green', alpha=0.1)
+    # Set the scale labels of the graph
     axs[1].set_xlabel("Time Scale (Days)")
     axs[1].set_ylabel("RSI")
 
-    axs[1].axhline(70, color='red', linestyle='--', label='Threshold 70')
-    axs[1].axhline(30, color='green', linestyle='--', label='Threshold 30')
-    axs[1].fill_between([i + period + 1 for i in range(len(rsi))], 70, 100, color='red', alpha=0.1)
-    axs[1].fill_between([i + period + 1 for i in range(len(rsi))], 0, 30, color='green', alpha=0.1)
-
-    plt.savefig(f"Charts/{ticker}_{CurrentDate}.png")
+    # Save the graph and wait for next api interval
+    plt.savefig(f"./Charts/{ticker}_{CurrentDate}.png")
+    plt.show()
     time.sleep(15)
