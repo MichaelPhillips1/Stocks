@@ -59,32 +59,38 @@ def calculateBollingerBands(prices, period=14, num_std_dev=2):
 
     return [rolling_mean, upper_band, lower_band]
 
-tickers = ["HL", "AMZN", "AAPL", "NFLX", "NVDA", "PLTR"]
+tickers = ["MSFT", "HL", "AMZN", "AAPL", "NFLX", "NVDA", "PLTR", "GOOGL", "META", "TSLA", "JNJ", "JPM", "V", "DIS", "PFE", "CSCO", "XOM", "T", "WMT"]
+currentTickerPrices = []
 CurrentDate = datetime.date.today()
-PreviousDate = CurrentDate - datetime.timedelta(days=7 * 35)
+PreviousDate = CurrentDate - datetime.timedelta(days=7 * 35 * 1)
 
+# Collect current days price
 for ticker in tickers:
+    while True:
+        try:
+            currentPrice = float(input(f"Please enter the current days price for {ticker}: "))
+            if(int(input("Is this correct? 1 for yes, anything else for no: ")) == 1):
+                currentTickerPrices.append(currentPrice)
+                break
+        except:
+            continue
+
+for ind, ticker in enumerate(tickers):
     try:
         request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
         data = ParseData(request)
+        currentPriceData = data[1]
+        if(len(currentTickerPrices) > 0):
+            currentPriceData.append(currentTickerPrices[ind])
     except:
         time.sleep(15)
         continue
 
-    #Collect current days price (looking for api workaround)
-    while True:
-        try:
-            currentPrice = float(input(f"Please enter the current days price for {ticker}: "))
-            currentPriceData = data[1]
-            currentPriceData.append(currentPrice)
-            break
-        except:
-            continue
-
     # Set parameters for indicators
-    periodRSI=14
-    periodBollinger=14
+    periodRSI = 14
+    periodBollinger = 14
     stdDevBollinger = 2
+
     # Calculate indicators
     rsi = CalculateRSI(currentPriceData, periodRSI)
     bollinger = calculateBollingerBands(currentPriceData, periodBollinger, stdDevBollinger)
@@ -99,10 +105,10 @@ for ticker in tickers:
     axs[0].plot([i + periodBollinger - 1 for i in range(len(bollinger[2]))], bollinger[2], color='red')
     # Set the scale labels of the graph
     axs[0].set_xlabel("Time Scale (Days)")
-    axs[0].set_ylabel("Price")
+    axs[0].set_ylabel("Price X Bollinger")
 
     # Plot the RSI
-    axs[1].plot([i + periodRSI + 1 for i in range(len(rsi))], rsi)
+    axs[1].plot([i + periodRSI + 1 for i in range(len(rsi))], rsi, label=f"RSI: {rsi[-1]}")
     # Set bounds for overbought and oversold
     axs[1].axhline(70, color='red', linestyle='--', label='Threshold 70')
     axs[1].axhline(30, color='green', linestyle='--', label='Threshold 30')
@@ -115,5 +121,4 @@ for ticker in tickers:
 
     # Save the graph and wait for next api interval
     plt.savefig(f"./Charts/{ticker}_{CurrentDate}.png")
-    plt.show()
     time.sleep(15)
