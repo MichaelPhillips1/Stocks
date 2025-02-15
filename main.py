@@ -1,7 +1,9 @@
-import time
-import requests
-import datetime
 import matplotlib.pyplot as plt
+import asyncio
+import json
+import websockets
+
+
 plt.switch_backend('TkAgg')
 plt.style.use('dark_background')
 
@@ -59,66 +61,57 @@ def calculateBollingerBands(prices, period=14, num_std_dev=2):
 
     return [rolling_mean, upper_band, lower_band]
 
-tickers = ["MSFT", "HL", "AMZN", "AAPL", "NFLX", "NVDA", "PLTR", "GOOGL", "META", "TSLA", "JNJ", "JPM", "V", "DIS", "PFE", "CSCO", "XOM", "T", "WMT"]
-currentTickerPrices = []
-CurrentDate = datetime.date.today()
-PreviousDate = CurrentDate - datetime.timedelta(days=7 * 35 * 1)
+API_KEY = "pG4bf3NMKFMInt3WTmPOR4QwB0RNJgw5"
 
-# Collect current days price
-for ticker in tickers:
-    while True:
-        try:
-            currentPrice = float(input(f"Please enter the current days price for {ticker}: "))
-            if(int(input("Is this correct? 1 for yes, anything else for no: ")) == 1):
-                currentTickerPrices.append(currentPrice)
-                break
-        except:
-            continue
+async def polygon_crypto_ws():
+    url = "wss://socket.polygon.io/crypto"
+    async with websockets.connect(url) as ws:
+        auth_message = {"action": "auth", "params": API_KEY}
+        await ws.send(json.dumps(auth_message))
+        response = await ws.recv()
+        subscribe_message = {"action": "subscribe", "params": "XA.X:BTC-USD"}
+        await ws.send(json.dumps(subscribe_message))
+        while True:
+            message = await ws.recv()
+            try:
+                data = json.loads(message)[0]
+                print(data['c'])
+            except:
+                pass
 
-for ind, ticker in enumerate(tickers):
-    try:
-        request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
-        data = ParseData(request)
-        currentPriceData = data[1]
-        if(len(currentTickerPrices) > 0):
-            currentPriceData.append(currentTickerPrices[ind])
-    except:
-        time.sleep(15)
-        continue
+asyncio.run(polygon_crypto_ws())
 
-    # Set parameters for indicators
-    periodRSI = 14
-    periodBollinger = 14
-    stdDevBollinger = 2
-
-    # Calculate indicators
-    rsi = CalculateRSI(currentPriceData, periodRSI)
-    bollinger = calculateBollingerBands(currentPriceData, periodBollinger, stdDevBollinger)
-
-    # Figure for plots
-    fig, axs = plt.subplots(2, 1, figsize=(10, 8))
-    # Plot stock prices
-    axs[0].plot([i for i in range(len(currentPriceData))], currentPriceData)
-    # Plot bollingers over the prices
-    axs[0].plot([i + periodBollinger - 1 for i in range(len(bollinger[0]))], bollinger[0], color='green')
-    axs[0].plot([i + periodBollinger - 1 for i in range(len(bollinger[1]))], bollinger[1], color='red')
-    axs[0].plot([i + periodBollinger - 1 for i in range(len(bollinger[2]))], bollinger[2], color='red')
-    # Set the scale labels of the graph
-    axs[0].set_xlabel("Time Scale (Days)")
-    axs[0].set_ylabel("Price X Bollinger")
-
-    # Plot the RSI
-    axs[1].plot([i + periodRSI + 1 for i in range(len(rsi))], rsi, label=f"RSI: {rsi[-1]}")
-    # Set bounds for overbought and oversold
-    axs[1].axhline(70, color='red', linestyle='--', label='Threshold 70')
-    axs[1].axhline(30, color='green', linestyle='--', label='Threshold 30')
-    # Share in areas for overbought and oversold
-    axs[1].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 70, 100, color='red', alpha=0.1)
-    axs[1].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 0, 30, color='green', alpha=0.1)
-    # Set the scale labels of the graph
-    axs[1].set_xlabel("Time Scale (Days)")
-    axs[1].set_ylabel("RSI")
-
-    # Save the graph and wait for next api interval
-    plt.savefig(f"./Charts/{ticker}_{CurrentDate}.png")
-    time.sleep(15)
+# periodRSI = 14
+# periodBollinger = 14
+# stdDevBollinger = 2
+#
+# # Calculate indicators
+# rsi = CalculateRSI(currentPriceData, periodRSI)
+# bollinger = calculateBollingerBands(currentPriceData, periodBollinger, stdDevBollinger)
+#
+# # Figure for plots
+# fig, axs = plt.subplots(2, 1, figsize=(10, 8))
+# # Plot stock prices
+# axs[0].plot([i for i in range(len(currentPriceData))], currentPriceData)
+# # Plot bollingers over the prices
+# axs[0].plot([i + periodBollinger - 1 for i in range(len(bollinger[0]))], bollinger[0], color='green')
+# axs[0].plot([i + periodBollinger - 1 for i in range(len(bollinger[1]))], bollinger[1], color='red')
+# axs[0].plot([i + periodBollinger - 1 for i in range(len(bollinger[2]))], bollinger[2], color='red')
+# # Set the scale labels of the graph
+# axs[0].set_xlabel("Time Scale (Days)")
+# axs[0].set_ylabel("Price X Bollinger")
+#
+# # Plot the RSI
+# axs[1].plot([i + periodRSI + 1 for i in range(len(rsi))], rsi, label=f"RSI: {rsi[-1]}")
+# # Set bounds for overbought and oversold
+# axs[1].axhline(70, color='red', linestyle='--', label='Threshold 70')
+# axs[1].axhline(30, color='green', linestyle='--', label='Threshold 30')
+# # Share in areas for overbought and oversold
+# axs[1].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 70, 100, color='red', alpha=0.1)
+# axs[1].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 0, 30, color='green', alpha=0.1)
+# # Set the scale labels of the graph
+# axs[1].set_xlabel("Time Scale (Days)")
+# axs[1].set_ylabel("RSI")
+#
+# # Save the graph and wait for next api interval
+# plt.show()
