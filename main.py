@@ -49,7 +49,8 @@ def calculateMACD(close_prices, fast_period = 12, slow_period = 26, signal_perio
     ema_slow = computeEMA(close_prices, slow_period)
     macd_line = [fast - slow for fast, slow in zip(ema_fast, ema_slow)]
     signal_line = computeEMA(macd_line, signal_period)
-    return [signal_line, macd_line]
+    macd_hist = [macd - signal for macd, signal in zip(macd_line, signal_line)]
+    return [signal_line, macd_line, macd_hist]
 
 tickers = ["MSFT", "HL", "AMZN", "AAPL", "NFLX", "NVDA", "PLTR", "GOOGL", "META", "TSLA", "JNJ", "JPM", "V", "DIS", "PFE", "CSCO", "XOM", "T", "WMT"]
 CurrentDate = datetime.date.today()
@@ -98,5 +99,4 @@ for ind, ticker in enumerate(tickers):
 
     # Save the graph and wait for next api interval
     plt.savefig(f"./Charts/{ticker}_{CurrentDate}.png")
-    plt.show()
     time.sleep(15)
