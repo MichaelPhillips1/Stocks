@@ -52,7 +52,7 @@ def calculateMACD(close_prices, fast_period = 12, slow_period = 26, signal_perio
     macd_hist = [macd - signal for macd, signal in zip(macd_line, signal_line)]
     return [signal_line, macd_line, macd_hist]
 
-tickers = ["MSFT", "HL", "AMZN", "AAPL", "NFLX", "NVDA", "PLTR", "GOOGL", "META", "TSLA", "JNJ", "JPM", "V", "DIS", "PFE", "CSCO", "XOM", "T", "WMT"]
+tickers = ["MSFT", "HL", "AMZN", "AAPL", "NFLX", "NVDA", "PLTR", "GOOGL", "META", "TSLA", "JNJ", "JPM", "V", "DIS", "PFE", "CSCO", "XOM", "T", "WMT", "AVGO", "MA", "ORCL", "BABA", "IBM", "QCOM", "AMD", "SNDL", "TJX", "GFS", "NOK"]
 CurrentDate = datetime.date.today()
 PreviousDate = CurrentDate - datetime.timedelta(days=7 * 50)
 for ind, ticker in enumerate(tickers):
