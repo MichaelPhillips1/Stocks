@@ -11,6 +11,13 @@ while True:
         request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
         data = ParseData(request)
         currentPriceData = data[1]
+        try:
+            newPrice = float(input(f"Current daily price: {currentPriceData[-1]}\n"
+                                   f"Enter a current daily price or -1 to skip: "))
+            if(newPrice != -1):
+                currentPriceData.append(newPrice)
+        except:
+            pass
     except:
         time.sleep(15)
         continue
@@ -50,4 +57,7 @@ while True:
 
     # Save the graph and wait for next api interval
     plt.savefig(f"./Charts/{ticker}_{CurrentDate}.png")
+    plt.show()
     time.sleep(15)
+
+    # B msft on 2025-02-21 @408.9
