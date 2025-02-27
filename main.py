@@ -60,4 +60,4 @@ while True:
     plt.show()
     time.sleep(15)
 
-    # B msft on 2025-02-21 @408.9
+    # B msft on 2025-02-21 @408
