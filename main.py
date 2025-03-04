@@ -9,7 +9,7 @@ while True:
     try:
         ticker = str(input("Please enter a ticker: ")).upper()
         request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
-        data = ParseData(request)
+        data = parseDataPolygon(request)
         currentPriceData = data[1]
         try:
             newPrice = float(input(f"Current daily price: {currentPriceData[-1]}\n"
@@ -62,3 +62,4 @@ while True:
 
     # B msft on 2025-02-21 @408
     # B googl on 2025-02-27 @ 168
+    # B tsla on 2025-04-04 @ 272
