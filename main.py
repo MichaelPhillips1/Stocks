@@ -59,7 +59,3 @@ while True:
     plt.savefig(f"./Charts/{ticker}_{CurrentDate}.png")
     plt.show()
     time.sleep(15)
-
-    # B msft on 2025-02-21 @408
-    # B googl on 2025-02-27 @ 168
-    # B tsla on 2025-04-04 @ 272
