@@ -1,4 +1,4 @@
-def ParseData(results):
+def parseDataPolygon(results):
     dates = [result['t'] for result in results]
     closing_prices = [result['c'] for result in results]
     high_prices = [result['h'] for result in results]
