@@ -8,7 +8,7 @@ body {
     monospace;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: rgb(20, 20, 20);
+  background-color: rgb(0, 0, 0);
 }
 
 #SearchBodyContainer{
@@ -21,7 +21,7 @@ body {
   height: fit-content;
   margin-top: 5vh;
 
-  background-color: rgb(50, 50, 50);
+  background-color: rgb(20, 20, 20);
   padding-left: 2.5vw;
   padding-right: 2.5vw;
   padding-top: 2.5vh;
@@ -33,8 +33,9 @@ body {
   width: 75%;
   height: 2rem;
 
-  background-color: rgb(80, 80, 80);
+  background-color: rgb(50, 50, 50);
   border-radius: 20px;
+  border: 2px solid rgb(0, 0, 0);
 }
 
 #SearchBarIndicatorDropdownButton{
@@ -47,14 +48,15 @@ body {
   justify-content: center;
 
   color: white;
-  background-color: rgb(80, 80, 80);
+  background-color: rgb(50, 50, 50);
   border-radius: 20px;
+  border: 2px solid rgb(0, 0, 0);
 }
 
 #SearchIndicatorSelecitonDiv{
   overflow: hidden;
   margin-top: 2.5vh;
-  background-color: rgb(80, 80, 80);
+  background-color: rgb(50, 50, 50);
   border-radius: 20px;
   width: 90%;
   height: fit-content;
@@ -75,4 +77,13 @@ body {
 
 .css-1umw9bq-MuiSvgIcon-root {
   color: white;
+}
+
+p{
+  color: white;
+}
+
+canvas{
+  border-radius: 20px;
+  border: 2px solid rgb(0, 0, 0);
 }

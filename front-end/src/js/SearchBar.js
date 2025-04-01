@@ -18,7 +18,13 @@ function SearchBar(){
         let canvasDrawer = canvas.getContext('2d');
 
         //Temp Data
-        let data = [100, 104, 102, 106, 115, 104, 130, 125, 126, 124, 126, 134, 132, 132, 131, 132, 129, 127]
+        let data = [100, 104, 102, 106, 115,
+            104, 109, 107, 109, 114, 123, 120,
+            122, 121, 127, 129, 132, 131, 132,
+            129, 131, 134, 137, 132, 134, 137,
+            136, 139, 137, 136, 135, 136, 134,
+            132, 130, 125, 126, 124, 126, 134,
+            132, 132, 131, 132, 129, 127, 124]
         let max = Math.max(...data)
         let min = Math.min(...data)
 
@@ -26,7 +32,14 @@ function SearchBar(){
         for(let i = 1; i < data.length; i++){
             canvasDrawer.lineTo(canvas.width * (i / data.length), canvas.height - calcPosition(min, max, data[i], canvas.height))
         }
+        canvasDrawer.strokeStyle = "green"
         canvasDrawer.stroke();
+
+        canvasDrawer.lineTo(canvas.width * ((data.length - 1) / data.length), canvas.height - calcPosition(min, max, data[0], canvas.height))
+        canvasDrawer.closePath()
+
+        canvasDrawer.fillStyle = "rgba(0, 255, 0, .05)"
+        canvasDrawer.fill()
     }, [])
 
     return <div id="SearchBodyContainer">
@@ -43,17 +56,17 @@ function SearchBar(){
                     <div><Checkbox></Checkbox> GOLDEN CROSS</div>
                 </div>
             </div>
-            PRICES
+            <p>Prices</p>
             <canvas id="PriceChart" width={(window.innerWidth * .75)} height={(window.innerHeight * .75)}></canvas>
-            RSI
+            <p>RSI</p>
             <canvas id="RSIChart" width={(window.innerWidth * .75)} height={(window.innerHeight * .75)}></canvas>
-            MACD
+            <p>MACD</p>
             <canvas id="MACDChart" width={(window.innerWidth * .75)} height={(window.innerHeight * .75)}></canvas>
-            BOLLINGER
+            <p>BOLLINGER</p>
             <canvas id="BollingerChart" width={(window.innerWidth * .75)} height={(window.innerHeight * .75)}></canvas>
-            ICHIMOKU
+            <p>ICHIMOKU</p>
             <canvas id="IchimokuChart" width={(window.innerWidth * .75)} height={(window.innerHeight * .75)}></canvas>
-            GOLDEN CROSS
+            <p>GOLDEN CROSS</p>
             <canvas id="GoldenCrossChart" width={(window.innerWidth * .75)} height={(window.innerHeight * .75)}></canvas>
         </div>
 }
