@@ -32,10 +32,26 @@ body {
 #SearchBarInput{
   width: 75%;
   height: 2rem;
-
   background-color: rgb(50, 50, 50);
   border-radius: 20px;
+  color: white;
   border: 2px solid rgb(0, 0, 0);
+}
+
+#SearchBarButton{
+  height: 2rem;
+  color: white;
+  background-color: rgb(50, 50, 50);
+  border-radius: 20px;
+  margin-left: 1rem;
+}
+
+#SearchHeadContainer{
+  width: 90%;
+  display: flex;
+  justify-content: center;
+  padding-left: 2.5%;
+  padding-right: 2.5%;
 }
 
 #SearchBarIndicatorDropdownButton{
@@ -84,6 +100,7 @@ p{
 }
 
 canvas{
-  border-radius: 20px;
+  padding: 0px;
+  inset: 0px;
   border: 2px solid rgb(0, 0, 0);
 }

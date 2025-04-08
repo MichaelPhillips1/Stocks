@@ -1,3 +1,10 @@
+import datetime, requests
+
+def formPolygonQuery(ticker):
+    CurrentDate = datetime.date.today()
+    PreviousDate = CurrentDate - datetime.timedelta(days=7 * 52)
+    return requests.get(f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
+
 def parseDataPolygon(results):
     dates = [result['t'] for result in results]
     closing_prices = [result['c'] for result in results]

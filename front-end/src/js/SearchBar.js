@@ -1,49 +1,48 @@
-import { React, useEffect, useState, useRef} from 'react';
+import { React, useState} from 'react';
 import ArrowDropDownCircleIcon from '@mui/icons-material/ArrowDropDownCircle';
-import { Checkbox, getTableHeadUtilityClass } from '@mui/material';
-import { height, margin, maxHeight, width } from '@mui/system';
+import { Checkbox } from '@mui/material';
+import axios from 'axios';
 
 function SearchBar(){
 
     const [indicatorDropDownOpen, setIndicatorDropDownOpen] = useState(false);
+    const [ticker, setTicker] = useState("")
 
     function calcPosition(min, max, value, height){
         let offset = (value - min) / (max - min)
-        return (.025 * height) + ((.95 * height) * offset)
+        return ((.95 * height) * offset) + (.025 * height)
     }
 
-    useEffect(() => {
+    function fillPriceChart(data){
         let canvas = document.getElementById("PriceChart");
         if(!canvas) return;
         let canvasDrawer = canvas.getContext('2d');
 
-        //Temp Data
-        let data = [100, 104, 102, 106, 115,
-            104, 109, 107, 109, 114, 123, 120,
-            122, 121, 127, 129, 132, 131, 132,
-            129, 131, 134, 137, 132, 134, 137,
-            136, 139, 137, 136, 135, 136, 134,
-            132, 130, 125, 126, 124, 126, 134,
-            132, 132, 131, 132, 129, 127, 124]
         let max = Math.max(...data)
         let min = Math.min(...data)
 
         canvasDrawer.moveTo(0, canvas.height - calcPosition(min, max, data[0], canvas.height))
         for(let i = 1; i < data.length; i++){
-            canvasDrawer.lineTo(canvas.width * (i / data.length), canvas.height - calcPosition(min, max, data[i], canvas.height))
+            canvasDrawer.lineTo(canvas.width * (i / (data.length - 1)), canvas.height - calcPosition(min, max, data[i], canvas.height))
         }
+
         canvasDrawer.strokeStyle = "green"
         canvasDrawer.stroke();
 
-        canvasDrawer.lineTo(canvas.width * ((data.length - 1) / data.length), canvas.height - calcPosition(min, max, data[0], canvas.height))
+        canvasDrawer.lineTo(canvas.width, canvas.height)
+        canvasDrawer.lineTo(0, canvas.height)
         canvasDrawer.closePath()
 
         canvasDrawer.fillStyle = "rgba(0, 255, 0, .05)"
         canvasDrawer.fill()
-    }, [])
+    }
+
+    async function initializeSearch(){
+        axios.get('http://127.0.0.1:5000/PriceData',{params:{ticker: ticker}}).then(response => {fillPriceChart(response.data.PriceData)})
+    }
 
     return <div id="SearchBodyContainer">
-            <input id="SearchBarInput"></input>
+            <div id="SearchHeadContainer"><input id="SearchBarInput" onChange={(e) => setTicker(e.target.value)}></input><button id="SearchBarButton" onClick={() => initializeSearch()}>Search</button></div>
             <button id="SearchBarIndicatorDropdownButton" onClick={() => {setIndicatorDropDownOpen(!indicatorDropDownOpen)}}>
                 Technicals <ArrowDropDownCircleIcon/>
             </button>
