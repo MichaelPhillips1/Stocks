@@ -39,6 +39,8 @@ function SearchBar(){
 
     async function initializeSearch(){
         axios.get('http://127.0.0.1:5000/PriceData',{params:{ticker: ticker}}).then(response => {fillPriceChart(response.data.PriceData)})
+        axios.get('http://127.0.0.1:5000/MACDData',{params:{ticker: ticker}}).then(response => {console.log(response)})
+        axios.get('http://127.0.0.1:5000/RSIData',{params:{ticker: ticker}}).then(response => {console.log(response)})
     }
 
     return <div id="SearchBodyContainer">
@@ -50,23 +52,14 @@ function SearchBar(){
                 <div id="SearchIndicatorSelectionWrapper" style={!indicatorDropDownOpen ? {visibility: 'hidden', width: '100%'} : {width: '100%'}}>
                     <div><Checkbox></Checkbox> RSI</div>
                     <div><Checkbox></Checkbox> MACD</div>
-                    <div><Checkbox></Checkbox> BOLLINGER</div>
-                    <div><Checkbox></Checkbox> ICHIMOKU</div>
-                    <div><Checkbox></Checkbox> GOLDEN CROSS</div>
                 </div>
             </div>
             <p>Prices</p>
             <canvas id="PriceChart" width={(window.innerWidth * .75)} height={(window.innerHeight * .75)}></canvas>
-            <p>RSI</p>
-            <canvas id="RSIChart" width={(window.innerWidth * .75)} height={(window.innerHeight * .75)}></canvas>
             <p>MACD</p>
             <canvas id="MACDChart" width={(window.innerWidth * .75)} height={(window.innerHeight * .75)}></canvas>
-            <p>BOLLINGER</p>
-            <canvas id="BollingerChart" width={(window.innerWidth * .75)} height={(window.innerHeight * .75)}></canvas>
-            <p>ICHIMOKU</p>
-            <canvas id="IchimokuChart" width={(window.innerWidth * .75)} height={(window.innerHeight * .75)}></canvas>
-            <p>GOLDEN CROSS</p>
-            <canvas id="GoldenCrossChart" width={(window.innerWidth * .75)} height={(window.innerHeight * .75)}></canvas>
+            <p>RSI</p>
+            <canvas id="RSIChart" width={(window.innerWidth * .75)} height={(window.innerHeight * .75)}></canvas>
         </div>
 }
 
