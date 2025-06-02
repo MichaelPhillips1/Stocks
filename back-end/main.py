@@ -29,31 +29,44 @@ while True:
 
     rsi = calculateRSI(currentPriceData, periodRSI)
     macd = calculateMACD(currentPriceData, periodFastMacd, periodSlowMacd, signalPeriodMacd)
+    fib = calculateFibonacciRetracements(currentPriceData)
 
-    fig, axs = plt.subplots(3,1, figsize=(13,13))
+    fig, axs = plt.subplots(2,2, figsize=(13,13))
 
     # Plot the price
-    axs[0].plot([i for i in range(len(currentPriceData))], currentPriceData, label=f"Price: {currentPriceData[-1]}")
-    axs[0].set_xlabel("Time Scale (Days)")
-    axs[0].set_ylabel("Price")
-    axs[0].legend(loc="upper left")
+    axs[0, 0].plot([i for i in range(len(currentPriceData))], currentPriceData, label=f"Price: {currentPriceData[-1]}")
+    axs[0, 0].set_xlabel("Time Scale (Days)")
+    axs[0, 0].set_ylabel("Price")
+    axs[0, 0].legend(loc="upper left")
 
     # Plot the RSI
-    axs[1].plot([i + periodRSI + 1 for i in range(len(rsi))], rsi, label=f"RSI: {rsi[-1]}")
-    axs[1].axhline(70, color='red', linestyle='--')
-    axs[1].axhline(30, color='green', linestyle='--')
-    axs[1].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 70, 100, color='red', alpha=0.1)
-    axs[1].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 0, 30, color='green', alpha=0.1)
-    axs[1].set_xlabel("Time Scale (Days)")
-    axs[1].set_ylabel("RSI")
-    axs[1].legend(loc="upper left")
+    axs[1, 0].plot([i + periodRSI + 1 for i in range(len(rsi))], rsi, label=f"RSI: {rsi[-1]}")
+    axs[1, 0].axhline(70, color='red', linestyle='--')
+    axs[1, 0].axhline(30, color='green', linestyle='--')
+    axs[1, 0].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 70, 100, color='red', alpha=0.1)
+    axs[1, 0].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 0, 30, color='green', alpha=0.1)
+    axs[1, 0].set_xlabel("Time Scale (Days)")
+    axs[1, 0].set_ylabel("RSI")
+    axs[1, 0].legend(loc="upper left")
 
     # Plot the MACD
-    axs[2].plot([i for i in range(len(macd[0]))], macd[0], color="red", label=f"Signal: {macd[0][-1]}")
-    axs[2].plot([i for i in range(len(macd[1]))], macd[1], color="green", label=f"MACD: {macd[1][-1]}")
-    axs[2].set_xlabel("Time Scale (Days)")
-    axs[2].set_ylabel("MACD")
-    axs[2].legend(loc="upper left")
+    axs[0, 1].plot([i for i in range(len(macd[0]))], macd[0], color="red", label=f"Signal: {macd[0][-1]}")
+    axs[0, 1].plot([i for i in range(len(macd[1]))], macd[1], color="green", label=f"MACD: {macd[1][-1]}")
+    axs[0, 1].set_xlabel("Time Scale (Days)")
+    axs[0, 1].set_ylabel("MACD")
+    axs[0, 1].legend(loc="upper left")
+
+    # Plot the fibonacci
+    axs[1, 1].plot(range(len(currentPriceData)), currentPriceData, label="Price", linewidth=1.5)
+    labels = ['0.0%', '23.6%', '38.2%', '50.0%', '61.8%', '78.6%', '100.0%']
+    for lvl, label in zip(fib, labels):
+        axs[1, 1].axhline(y=lvl, linestyle='--', linewidth=1, alpha=0.7)
+        axs[1, 1].text(len(currentPriceData) - 1, lvl, label, va='center', ha='right', fontsize=8)
+
+    axs[1, 1].set_title("Fibonacci Retracement")
+    axs[1, 1].set_xlabel("Time Scale (Days)")
+    axs[1, 1].set_ylabel("Price")
+    axs[1, 1].legend()
 
     # Save the graph and wait for next api interval
     plt.savefig(f"./Charts/{ticker}_{CurrentDate}.png")

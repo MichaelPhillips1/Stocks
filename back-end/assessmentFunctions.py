@@ -51,3 +51,13 @@ def calculateMACD(close_prices, fast_period = 12, slow_period = 26, signal_perio
     signal_line = computeEMA(macd_line, signal_period)
     macd_hist = [macd - signal for macd, signal in zip(macd_line, signal_line)]
     return [signal_line, macd_line, macd_hist]
+
+def calculateFibonacciRetracements(price_array):
+    if not price_array:
+        return []
+
+    high = max(price_array)
+    low = min(price_array)
+    diff = high - low
+
+    return [high, high - 0.236 * diff, high - 0.382 * diff, high - 0.500 * diff, high - 0.618 * diff, high - 0.786 * diff, low]
