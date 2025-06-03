@@ -55,9 +55,16 @@ def calculateMACD(close_prices, fast_period = 12, slow_period = 26, signal_perio
 def calculateFibonacciRetracements(price_array):
     if not price_array:
         return []
-
+    
+    trend = -1
+    if price_array[-1] > price_array[0]:
+        trend = 1
+    
     high = max(price_array)
     low = min(price_array)
     diff = high - low
 
-    return [high, high - 0.236 * diff, high - 0.382 * diff, high - 0.500 * diff, high - 0.618 * diff, high - 0.786 * diff, low]
+    if trend == 1:
+        return [high, high - 0.236 * diff, high - 0.382 * diff, high - 0.500 * diff, high - 0.618 * diff, high - 0.786 * diff, low]
+    else:
+        return [low, low + 0.236 * diff, low + 0.382 * diff, low + 0.500 * diff, low + 0.618 * diff, low + 0.786 * diff, high]
