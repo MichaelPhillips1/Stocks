@@ -11,8 +11,9 @@ def parseDataPolygon(results):
     high_prices = [result['h'] for result in results]
     low_prices = [result['l'] for result in results]
     open_prices = [result['o'] for result in results]
+    volume = [result['v'] for result in results]
 
-    return [dates, closing_prices, open_prices, high_prices, low_prices]
+    return [dates, closing_prices, open_prices, high_prices, low_prices, volume]
 
 def calculateRSI(closing_prices, period = 14):
     totalRSI = []
