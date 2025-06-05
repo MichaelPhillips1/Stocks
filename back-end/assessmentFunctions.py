@@ -69,3 +69,18 @@ def calculateFibonacciRetracements(price_array):
         return [high, high - 0.236 * diff, high - 0.382 * diff, high - 0.500 * diff, high - 0.618 * diff, high - 0.786 * diff, low]
     else:
         return [low, low + 0.236 * diff, low + 0.382 * diff, low + 0.500 * diff, low + 0.618 * diff, low + 0.786 * diff, high]
+
+def calculateWilliamsR(high_prices, low_prices, close_prices, period=14):
+    williams_r = []
+    for i in range(period - 1, len(close_prices)):
+        window_highs = high_prices[i - period + 1 : i + 1]
+        window_lows = low_prices[i - period + 1 : i + 1]
+        highest_high = max(window_highs)
+        lowest_low = min(window_lows)
+        current_close = close_prices[i]
+        if highest_high - lowest_low == 0:
+            wr = 0
+        else:
+            wr = (highest_high - current_close) / (highest_high - lowest_low) * -100
+        williams_r.append(wr)
+    return williams_r
