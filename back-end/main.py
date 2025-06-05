@@ -4,7 +4,7 @@ plt.switch_backend('TkAgg')
 plt.style.use('dark_background')
 
 CurrentDate = datetime.date.today()
-PreviousDate = CurrentDate - datetime.timedelta(days=7 * 104)
+PreviousDate = CurrentDate - datetime.timedelta(days=7 * 52)
 while True:
     try:
         ticker = str(input("Please enter a ticker: ")).upper()
@@ -32,8 +32,7 @@ while True:
     macd = calculateMACD(currentPriceData, periodFastMacd, periodSlowMacd, signalPeriodMacd)
     fib = calculateFibonacciRetracements(currentPriceData)
 
-    fig, axs = plt.subplots(2,2, figsize=(13,13), constrained_layout=True)
-
+    fig, axs = plt.subplots(2, 2, figsize=(13,13), constrained_layout=True)
 
     # Plot the Fibonacci Retracements
     axs[0, 0].plot(range(len(currentPriceData)), currentPriceData, label="Price", linewidth=1.5)
@@ -74,4 +73,3 @@ while True:
     # Save the graph and wait for next api interval
     plt.savefig(f"./Charts/{ticker}_{CurrentDate}.png")
     plt.show()
-    time.sleep(15)
