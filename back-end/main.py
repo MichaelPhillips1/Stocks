@@ -10,7 +10,7 @@ while True:
         ticker = str(input("Please enter a ticker: ")).upper()
         request = requests.get(f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results']
         data = parseDataPolygon(request)
-        closePriceData, openPriceData, highPriceData, lowPriceData, volumeData = data[1], data[2], data[3]. data[4], data[5]
+        closePriceData, openPriceData, highPriceData, lowPriceData, volumeData = data[1], data[2], data[3], data[4], data[5]
         try:
             newPrice = float(input(f"Current daily price: {closePriceData[-1]}\n"
                                    f"Enter a current daily price or -1 to skip: "))
