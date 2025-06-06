@@ -16,36 +16,55 @@ class MyWindow(QMainWindow):
         self.setStyleSheet("background-color: #2F3136;")
         self.setGeometry(0, 0, width, height)
 
-        self.tickerSymbolEntryLabel = QLabel("PLEASE ENTER A TICKER", self)
+        self.tickerSymbolEntryLabel = QLabel("PLEASE ENTER A TICKER AND DAY TIME PERIOD", self)
         self.tickerSymbolEntryLabel.setStyleSheet('''font-size: 13pt; color: white;''')
         self.tickerSymbolEntryLabel.setAlignment(Qt.AlignCenter)
-        self.tickerSymbolEntryLabel.setGeometry(int(.45 * width), int(.05 * height) - 55, int(.1 * width), 50)
+        self.tickerSymbolEntryLabel.setGeometry(int(.4 * width), int(.05 * height) - 55, int(.2 * width), 50)
 
         self.tickerSymbolEntry = QLineEdit(self)
         self.tickerSymbolEntry.setStyleSheet('''background-color: white;
                                              font-size: 13pt;
                                              border-radius: 10px;''')
         self.tickerSymbolEntry.setAlignment(Qt.AlignCenter)
-        self.tickerSymbolEntry.setGeometry(int(.45 * width), int(.04 * height), int(.1 * width), 50)
-        self.tickerSymbolEntry.setPlaceholderText("Please Enter a Ticker")
+        self.tickerSymbolEntry.setGeometry(int(.395 * width), int(.04 * height), int(.1 * width), 50)
+        self.tickerSymbolEntry.setPlaceholderText("Ticker")
+
+        self.timePeriodDaysEntry = QLineEdit(self)
+        self.timePeriodDaysEntry.setStyleSheet('''background-color: white;
+                                             font-size: 13pt;
+                                             border-radius: 10px;''')
+        self.timePeriodDaysEntry.setAlignment(Qt.AlignCenter)
+        self.timePeriodDaysEntry.setGeometry(int(.505 * width), int(.04 * height), int(.1 * width), 50)
+        self.timePeriodDaysEntry.setPlaceholderText("Time Period (Days)")
 
         self.tickerSymbolSearchButton = QPushButton("SEARCH", self)
         self.tickerSymbolSearchButton.setStyleSheet('''font-size: 13pt; color: white;
                                                     border-radius: 10px;
                                                     border: 1px solid white;''')
         self.tickerSymbolSearchButton.setGeometry(int(.45 * width), int(.05 * height) + 55, int(.1 * width), 50)
-        self.tickerSymbolSearchButton.clicked.connect(self.help)
+        self.tickerSymbolSearchButton.clicked.connect(self.initiateSearch)
 
         self.figure = Figure()
         self.chartEmbededFigure = FigureCanvas(self.figure)
         self.chartEmbededFigure.setParent(self)  
         self.chartEmbededFigure.setGeometry(int(.05 * width), int(.05 * height) + 115, int(.9 * width), int(height * .75))
     
-    def help(self):
-        CurrentDate = datetime.date.today()
-        PreviousDate = CurrentDate - datetime.timedelta(days=7 * 52)
+    def initiateSearch(self):
+
         try:
-            data = parseDataPolygon(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{self.tickerSymbolEntry.text().strip().upper()}/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results'])
+            ticker = self.tickerSymbolEntry.text().strip().upper()
+            timePeriod = int(self.timePeriodDaysEntry.text())
+        except:
+            return
+        
+        if ticker == "" or not ticker.isalpha() or timePeriod < 30:
+            print("E")
+            return
+        
+        CurrentDate = datetime.date.today()
+        PreviousDate = CurrentDate - datetime.timedelta(days=timePeriod)
+        try:
+            data = parseDataPolygon(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results'])
         except:
             return
         
