@@ -1,10 +1,11 @@
-import time, datetime, requests, matplotlib.pyplot as plt, sys
-from PyQt5.QtWidgets import QMainWindow, QApplication, QLineEdit, QLabel, QPushButton
+import time, datetime, requests, matplotlib.pyplot as plt, sys, json
+from PyQt5.QtWidgets import QMainWindow, QApplication, QLineEdit, QLabel, QPushButton, QTextEdit
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PyQt5.QtCore import Qt
+from functools import partial
 from assessmentFunctions import *
-
+from openai import OpenAI
 
 plt.switch_backend('TkAgg')
 plt.style.use('dark_background')
@@ -12,21 +13,22 @@ plt.style.use('dark_background')
 class MyWindow(QMainWindow):
     def __init__(self, width, height):
         super().__init__()
+        self.client = OpenAI(api_key="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")
         self.setWindowTitle("Stock Technicals")
         self.setStyleSheet("background-color: #2F3136;")
         self.setGeometry(0, 0, width, height)
 
-        self.tickerSymbolEntryLabel = QLabel("PLEASE ENTER A TICKER AND DAY TIME PERIOD", self)
+        self.tickerSymbolEntryLabel = QLabel("PLEASE ENTER A TICKER, A DAY TIME PERIOD, AND A CURRENT PRICE IF APPLICABLE", self)
         self.tickerSymbolEntryLabel.setStyleSheet('''font-size: 13pt; color: white;''')
         self.tickerSymbolEntryLabel.setAlignment(Qt.AlignCenter)
-        self.tickerSymbolEntryLabel.setGeometry(int(.4 * width), int(.05 * height) - 55, int(.2 * width), 50)
+        self.tickerSymbolEntryLabel.setGeometry(int(.3 * width), int(.05 * height) - 55, int(.4 * width), 50)
 
         self.tickerSymbolEntry = QLineEdit(self)
         self.tickerSymbolEntry.setStyleSheet('''background-color: white;
                                              font-size: 13pt;
                                              border-radius: 10px;''')
         self.tickerSymbolEntry.setAlignment(Qt.AlignCenter)
-        self.tickerSymbolEntry.setGeometry(int(.395 * width), int(.04 * height), int(.1 * width), 50)
+        self.tickerSymbolEntry.setGeometry(int(.345 * width), int(.04 * height), int(.1 * width), 50)
         self.tickerSymbolEntry.setPlaceholderText("Ticker")
 
         self.timePeriodDaysEntry = QLineEdit(self)
@@ -34,8 +36,16 @@ class MyWindow(QMainWindow):
                                              font-size: 13pt;
                                              border-radius: 10px;''')
         self.timePeriodDaysEntry.setAlignment(Qt.AlignCenter)
-        self.timePeriodDaysEntry.setGeometry(int(.505 * width), int(.04 * height), int(.1 * width), 50)
+        self.timePeriodDaysEntry.setGeometry(int(.45 * width), int(.04 * height), int(.1 * width), 50)
         self.timePeriodDaysEntry.setPlaceholderText("Time Period (Days)")
+        
+        self.currentPriceEntry = QLineEdit(self)
+        self.currentPriceEntry.setStyleSheet('''background-color: white;
+                                             font-size: 13pt;
+                                             border-radius: 10px;''')
+        self.currentPriceEntry.setAlignment(Qt.AlignCenter)
+        self.currentPriceEntry.setGeometry(int(.555 * width), int(.04 * height), int(.1 * width), 50)
+        self.currentPriceEntry.setPlaceholderText("Current Price")
 
         self.tickerSymbolSearchButton = QPushButton("SEARCH", self)
         self.tickerSymbolSearchButton.setStyleSheet('''font-size: 13pt; color: white;
@@ -44,31 +54,124 @@ class MyWindow(QMainWindow):
         self.tickerSymbolSearchButton.setGeometry(int(.45 * width), int(.05 * height) + 55, int(.1 * width), 50)
         self.tickerSymbolSearchButton.clicked.connect(self.initiateSearch)
 
-        self.figure = Figure()
-        self.chartEmbededFigure = FigureCanvas(self.figure)
-        self.chartEmbededFigure.setParent(self)  
-        self.chartEmbededFigure.setGeometry(int(.05 * width), int(.05 * height) + 115, int(.9 * width), int(height * .75))
+        self.graphLeftButton = QPushButton("<", self)
+        self.graphLeftButton.setStyleSheet('''font-size: 13pt; color: white;
+                                                    border-radius: 10px;
+                                                    border: 1px solid white;''')
+        self.graphLeftButton.setGeometry(int(.02 * width), int(.475 * height), int(.02 * width), (int(.05 * height)))
+        self.graphLeftButton.clicked.connect(self.initiateSearch)
+        self.graphLeftButton.clicked.connect(partial(self.cycleGraphs, 0))
+
+
+        self.graphRightButton = QPushButton(">", self)
+        self.graphRightButton.setStyleSheet('''font-size: 13pt; color: white;
+                                                    border-radius: 10px;
+                                                    border: 1px solid white;''')
+        self.graphRightButton.setGeometry(int(.96 * width), int(.475 * height), int(.02 * width), (int(.05 * height)))
+        self.graphRightButton.clicked.connect(partial(self.cycleGraphs, 1))
+
+        self.chartSlide = 0
+        self.chartCollection = []
+
+        self.figureTwo = Figure()
+        self.chartEmbededFigureTwo = FigureCanvas(self.figureTwo)
+        self.chartEmbededFigureTwo.setParent(self)  
+        self.chartEmbededFigureTwo.setGeometry(int(.05 * width), int(.05 * height) + 115, int(.9 * width), int(height * .75))
+
+        self.figureOne = Figure()
+        self.chartEmbededFigureOne = FigureCanvas(self.figureOne)
+        self.chartEmbededFigureOne.setParent(self)  
+        self.chartEmbededFigureOne.setGeometry(int(.05 * width), int(.05 * height) + 115, int(.9 * width), int(height * .75))
+
+        self.OpenAIAnalysisFigure = QTextEdit(self)
+        self.OpenAIAnalysisFigure.setGeometry(int(.05 * width), int(.05 * height) + 115, int(.9 * width), int(height * .75))
+        self.OpenAIAnalysisFigure.setStyleSheet('''font-size: 8pt; color: white;
+                                                    border-radius: 10px;
+                                                    border: 1px solid white;''')
+        self.OpenAIAnalysisFigure.setReadOnly(True)
+
+        self.OpenAIAnalysisFigure.hide()
+        self.chartEmbededFigureTwo.hide()
+        self.chartEmbededFigureOne.hide()
+        self.graphLeftButton.hide()
+        self.graphRightButton.hide()
+
+    def cycleGraphs(self, factor):
+
+        if(factor == 0):
+            self.graphLeftButton.show()
+            self.graphRightButton.show()
+            self.OpenAIAnalysisFigure.hide()
+            self.chartEmbededFigureTwo.hide()
+            self.chartEmbededFigureOne.show()
+            return
+
+        if (self.chartSlide == 0 and factor == -1) or (self.chartSlide == 2 and factor == 1):
+            return
+        
+        self.chartSlide += factor
+        if self.chartSlide == 0:
+            self.OpenAIAnalysisFigure.hide()
+            self.chartEmbededFigureTwo.hide()
+            self.chartEmbededFigureOne.show()
+        elif self.chartSlide == 1:
+            self.OpenAIAnalysisFigure.hide()
+            self.chartEmbededFigureTwo.show()
+            self.chartEmbededFigureOne.hide()
+        else:
+            self.OpenAIAnalysisFigure.show()
+            self.chartEmbededFigureTwo.hide()
+            self.chartEmbededFigureOne.hide()
     
+    def openAIQuery(self, rsi, macd, fib, williams_r, closePriceData, timePeriod):
+
+        self.OpenAIAnalysisFigure.setPlainText("This is a sample paragraph used to test the QTextEdit widget in your application. It contains multiple sentences and enough text to verify line wrapping, scrolling behavior, and font rendering. You can replace this placeholder with your own content whenever you’re ready. Make sure the text editor displays this content correctly and remains read-only and fixed in size.")
+
+        return
+        
+        message = [
+            {"role": "user", "content": "You are to play the role of a technical analyst. You will be given a time frame in days, including weekends. You will be given technicals in the form of a list, with the last item being the most recent. You are to assess if the stock is a buy or sell and state rationalle. Feel free to interpret additional data to assist in this. Assess on the windows of 1 week, 2 weeks, 3 weeks, 6 months, 1 year, and 5 years."},
+        ]
+        for name, data in [
+            ("RSI",               rsi),
+            ("MACD",              macd),
+            ("FIBONACCI LEVELS",  fib),
+            ("WILLIAMS %R",       williams_r),
+            ("CLOSE PRICES",      closePriceData),
+            ("TIME RANGE IN DAYS", timePeriod),
+        ]:
+            message.append({
+                "role":    "user",
+                "content": f"{name}: {json.dumps(data)}"
+            })
+        response = self.client.responses.create(model="gpt-4.1", input=message)
+        print(response.output_text)
+
     def initiateSearch(self):
 
         try:
             ticker = self.tickerSymbolEntry.text().strip().upper()
-            timePeriod = int(self.timePeriodDaysEntry.text())
+            timePeriod = int(self.timePeriodDaysEntry.text().strip())
+            CurrentDate = datetime.date.today()
+            PreviousDate = CurrentDate - datetime.timedelta(days=timePeriod)
+            if ticker == "" or not ticker.isalpha() or timePeriod < 30:
+                return
         except:
             return
         
-        if ticker == "" or not ticker.isalpha() or timePeriod < 30:
-            print("E")
-            return
-        
-        CurrentDate = datetime.date.today()
-        PreviousDate = CurrentDate - datetime.timedelta(days=timePeriod)
         try:
             data = parseDataPolygon(requests.get(f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{PreviousDate.isoformat()}/{CurrentDate.isoformat()}?adjusted=true&sort=asc&limit=50000&apiKey=9cZNiOhwCdE5QpMY8aSsIWh3Z6BVavVC").json()['results'])
+            closePriceData, openPriceData, highPriceData, lowPriceData, volumeData = data[1], data[2], data[3], data[4], data[5]
         except:
             return
         
-        closePriceData, openPriceData, highPriceData, lowPriceData, volumeData = data[1], data[2], data[3], data[4], data[5]
+        try:
+            currentPrice = int(self.currentPriceEntry.text().strip())
+            closePriceData.append(currentPrice)
+            highPriceData.append(currentPrice)
+            lowPriceData.append(currentPrice)
+        except:
+            pass
         
         periodRSI = 14
         periodFastMacd = 12
@@ -76,51 +179,61 @@ class MyWindow(QMainWindow):
         signalPeriodMacd = 9
         williamsPeriod = 14
 
-        rsi = calculateRSI(closePriceData, periodRSI)
-        macd = calculateMACD(closePriceData, periodFastMacd, periodSlowMacd, signalPeriodMacd)
-        fib = calculateFibonacciRetracements(closePriceData)
-        williams_r = calculateWilliamsR(highPriceData, lowPriceData, closePriceData, williamsPeriod)
+        try:
+            rsi = calculateRSI(closePriceData, periodRSI)
+            macd = calculateMACD(closePriceData, periodFastMacd, periodSlowMacd, signalPeriodMacd)
+            fib = calculateFibonacciRetracements(closePriceData)
+            williams_r = calculateWilliamsR(highPriceData, lowPriceData, closePriceData, williamsPeriod)
+            self.openAIQuery(rsi, macd, fib, williams_r, closePriceData, timePeriod)
+        except:
+            return
 
-        self.figure.clear()
-        axs = self.figure.subplots(2, 2)
+        self.figureOne.clear()
+        self.figureTwo.clear()
+        self.OpenAIAnalysisFigure.hide()
+        axsOne = self.figureOne.subplots(2, 2)
+        axsTwo  = self.figureTwo.subplots(2, 2)
 
         # Plot the Fibonacci Retracements
-        axs[0, 0].plot(range(len(closePriceData)), closePriceData, label="Price", linewidth=1.5)
+        axsOne[0, 0].plot(range(len(closePriceData)), closePriceData, label="Price", linewidth=1.5)
         labels = ['0.0%', '23.6%', '38.2%', '50.0%', '61.8%', '78.6%', '100.0%']
         for lvl, label in zip(fib, labels):
-            axs[0, 0].axhline(y=lvl, linestyle='--', linewidth=1, alpha=0.7)
-            axs[0, 0].text(len(closePriceData) - 1, lvl, label, va='center', ha='right', fontsize=8)
-
-        axs[0, 0].set_title("Fibonacci Retracement")
-        axs[0, 0].set_xlabel("Time Scale (Days)")
-        axs[0, 0].set_ylabel("Price")
-        axs[0, 0].legend()
+            axsOne[0, 0].axhline(y=lvl, linestyle='--', linewidth=1, alpha=0.7)
+            axsOne[0, 0].text(len(closePriceData) - 1, lvl, label, va='center', ha='right', fontsize=8)
+        axsOne[0, 0].set_title("Fibonacci Retracement")
+        axsOne[0, 0].legend()
 
         # Plot the RSI
-        axs[1, 0].plot([i + periodRSI + 1 for i in range(len(rsi))], rsi, label=f"RSI: {rsi[-1]}")
-        axs[1, 0].axhline(70, color='red', linestyle='--')
-        axs[1, 0].axhline(30, color='green', linestyle='--')
-        axs[1, 0].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 70, 100, color='red', alpha=0.1)
-        axs[1, 0].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 0, 30, color='green', alpha=0.1)
-        axs[1, 0].set_title("RSI")
-        axs[1, 0].set_xlabel("Time Scale (Days)")
-        axs[1, 0].set_ylabel("RSI")
-
+        axsOne[1, 0].plot([i + periodRSI + 1 for i in range(len(rsi))], rsi, label=f"RSI: {rsi[-1]}")
+        axsOne[1, 0].axhline(70, color='red', linestyle='--')
+        axsOne[1, 0].axhline(30, color='green', linestyle='--')
+        axsOne[1, 0].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 70, 100, color='red', alpha=0.1)
+        axsOne[1, 0].fill_between([i + periodRSI + 1 for i in range(len(rsi))], 0, 30, color='green', alpha=0.1)
+        axsOne[1, 0].set_title("RSI")
+     
         # Plot the MACD
-        axs[0, 1].plot([i for i in range(len(macd[0]))], macd[0], color="red", label=f"Signal: {macd[0][-1]}")
-        axs[0, 1].plot([i for i in range(len(macd[1]))], macd[1], color="green", label=f"MACD: {macd[1][-1]}")
-        axs[0, 1].set_title("MACD")
-        axs[0, 1].set_xlabel("Time Scale (Days)")
-        axs[0, 1].set_ylabel("MACD")
+        axsOne[0, 1].plot([i for i in range(len(macd[0]))], macd[0], color="red", label=f"Signal: {macd[0][-1]}")
+        axsOne[0, 1].plot([i for i in range(len(macd[1]))], macd[1], color="green", label=f"MACD: {macd[1][-1]}")
+        axsOne[0, 1].set_title("MACD")
 
         # Plot the Volume
-        axs[1, 1].plot(range(len(volumeData)), volumeData, label="volume", linewidth=1.5)
-        axs[1, 1].set_title("Volume")
-        axs[1, 1].set_xlabel("Time Scale (Days)")
-        axs[1, 1].set_ylabel("Volume")
-        axs[1, 1].legend()
+        axsOne[1, 1].plot(range(len(volumeData)), volumeData, label="volume", linewidth=1.5)
+        axsOne[1, 1].set_title("Volume")
+        axsOne[1, 1].legend()
+        
+        # Plot the Williams R%
+        axsTwo[0, 0].set_ylim(0, -100)
+        axsTwo[0, 0].plot(list(range(williamsPeriod-1, williamsPeriod-1 + len(williams_r))), williams_r)
+        axsTwo[0, 0].axhline(-20, color='red', linestyle='--')
+        axsTwo[0, 0].axhline(-80, color='green', linestyle='--')
+        axsTwo[0, 0].fill_between(list(range(williamsPeriod-1, williamsPeriod-1 + len(williams_r))), -20, 0, color='red', alpha=0.1)
+        axsTwo[0, 0].fill_between(list(range(williamsPeriod-1, williamsPeriod-1 + len(williams_r))), -80, -100, color='green', alpha=0.1)
+        axsTwo[0, 0].set_title("Williams R%")
 
-        self.chartEmbededFigure.draw()
+        # Draw graphs and cycle to first slide
+        self.chartEmbededFigureTwo.draw()
+        self.chartEmbededFigureOne.draw()
+        self.cycleGraphs(0)
         
 if __name__ == '__main__':
     app = QApplication(sys.argv)
