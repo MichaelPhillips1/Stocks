@@ -1,4 +1,4 @@
-import time, datetime, requests, matplotlib.pyplot as plt, sys, json
+import time, datetime, requests, matplotlib.pyplot as plt, sys, json, threading
 from PyQt5.QtWidgets import QMainWindow, QApplication, QLineEdit, QLabel, QPushButton, QTextEdit
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -13,7 +13,7 @@ plt.style.use('dark_background')
 class MyWindow(QMainWindow):
     def __init__(self, width, height):
         super().__init__()
-        self.client = OpenAI()
+        self.client = OpenAI(api_key="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")
         self.setWindowTitle("Stock Technicals")
         self.setStyleSheet("background-color: #2F3136;")
         self.setGeometry(0, 0, width, height)
@@ -124,13 +124,9 @@ class MyWindow(QMainWindow):
             self.chartEmbededFigureOne.hide()
     
     def openAIQuery(self, rsi, macd, fib, williams_r, closePriceData, timePeriod):
-
-        self.OpenAIAnalysisFigure.setPlainText("This is a sample paragraph used to test the QTextEdit widget in your application. It contains multiple sentences and enough text to verify line wrapping, scrolling behavior, and font rendering. You can replace this placeholder with your own content whenever you’re ready. Make sure the text editor displays this content correctly and remains read-only and fixed in size.")
-
-        return
         
         message = [
-            {"role": "user", "content": "You are to play the role of a technical analyst. You will be given a time frame in days, including weekends. You will be given technicals in the form of a list, with the last item being the most recent. You are to assess if the stock is a buy or sell and state rationalle. Feel free to interpret additional data to assist in this. Assess on the windows of 1 week, 2 weeks, 3 weeks, 6 months, 1 year, and 5 years."},
+            {"role": "user", "content": "You are a technical analyst. You will be given time frame in days, including weekends, technicals in form of a list, with last item being the most recent. Assess if the stock is buy or sell and state rationalle. Assess on the windows of 1 wk, 2 wk, 3 wk, 6 mo, 1 yr, 5 yr."},
         ]
         for name, data in [
             ("RSI",               rsi),
@@ -145,6 +141,7 @@ class MyWindow(QMainWindow):
                 "content": f"{name}: {json.dumps(data)}"
             })
         response = self.client.responses.create(model="gpt-4.1", input=message)
+        self.OpenAIAnalysisFigure.setPlainText(response.output_text)
         print(response.output_text)
 
     def initiateSearch(self):
@@ -185,7 +182,8 @@ class MyWindow(QMainWindow):
             fib = calculateFibonacciRetracements(closePriceData)
             williams_r = calculateWilliamsR(highPriceData, lowPriceData, closePriceData, williamsPeriod)
             self.openAIQuery(rsi, macd, fib, williams_r, closePriceData, timePeriod)
-        except:
+        except Exception as e:
+            print(e)
             return
 
         self.figureOne.clear()
