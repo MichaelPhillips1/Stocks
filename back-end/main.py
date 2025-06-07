@@ -13,7 +13,7 @@ plt.style.use('dark_background')
 class MyWindow(QMainWindow):
     def __init__(self, width, height):
         super().__init__()
-        self.client = OpenAI(api_key="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")
+        self.client = OpenAI()
         self.setWindowTitle("Stock Technicals")
         self.setStyleSheet("background-color: #2F3136;")
         self.setGeometry(0, 0, width, height)
