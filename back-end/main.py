@@ -2,7 +2,7 @@ import time, datetime, requests, matplotlib.pyplot as plt, sys, json, threading
 from PyQt5.QtWidgets import QMainWindow, QApplication, QLineEdit, QLabel, QPushButton, QTextEdit
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from functools import partial
 from assessmentFunctions import *
 from openai import OpenAI
@@ -11,9 +11,12 @@ plt.switch_backend('TkAgg')
 plt.style.use('dark_background')
 
 class MyWindow(QMainWindow):
+
+    OpenAIAnalysisReady = pyqtSignal(str)
+
     def __init__(self, width, height):
         super().__init__()
-        self.client = OpenAI(api_key="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")
+        self.client = OpenAI(api_key="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")
         self.setWindowTitle("Stock Technicals")
         self.setStyleSheet("background-color: #2F3136;")
         self.setGeometry(0, 0, width, height)
@@ -59,9 +62,7 @@ class MyWindow(QMainWindow):
                                                     border-radius: 10px;
                                                     border: 1px solid white;''')
         self.graphLeftButton.setGeometry(int(.02 * width), int(.475 * height), int(.02 * width), (int(.05 * height)))
-        self.graphLeftButton.clicked.connect(self.initiateSearch)
-        self.graphLeftButton.clicked.connect(partial(self.cycleGraphs, 0))
-
+        self.graphLeftButton.clicked.connect(partial(self.cycleGraphs, -1))
 
         self.graphRightButton = QPushButton(">", self)
         self.graphRightButton.setStyleSheet('''font-size: 13pt; color: white;
@@ -73,6 +74,14 @@ class MyWindow(QMainWindow):
         self.chartSlide = 0
         self.chartCollection = []
 
+        self.OpenAIAnalysisFigure = QTextEdit(self)
+        self.OpenAIAnalysisReady.connect(self.OpenAIAnalysisFigure.setPlainText)
+        self.OpenAIAnalysisFigure.setGeometry(int(.05 * width), int(.05 * height) + 115, int(.9 * width), int(height * .75))
+        self.OpenAIAnalysisFigure.setStyleSheet('''font-size: 8pt; color: white;
+                                                    border-radius: 10px;
+                                                    border: 1px solid white;''')
+        self.OpenAIAnalysisFigure.setReadOnly(True)
+
         self.figureTwo = Figure()
         self.chartEmbededFigureTwo = FigureCanvas(self.figureTwo)
         self.chartEmbededFigureTwo.setParent(self)  
@@ -82,13 +91,6 @@ class MyWindow(QMainWindow):
         self.chartEmbededFigureOne = FigureCanvas(self.figureOne)
         self.chartEmbededFigureOne.setParent(self)  
         self.chartEmbededFigureOne.setGeometry(int(.05 * width), int(.05 * height) + 115, int(.9 * width), int(height * .75))
-
-        self.OpenAIAnalysisFigure = QTextEdit(self)
-        self.OpenAIAnalysisFigure.setGeometry(int(.05 * width), int(.05 * height) + 115, int(.9 * width), int(height * .75))
-        self.OpenAIAnalysisFigure.setStyleSheet('''font-size: 8pt; color: white;
-                                                    border-radius: 10px;
-                                                    border: 1px solid white;''')
-        self.OpenAIAnalysisFigure.setReadOnly(True)
 
         self.OpenAIAnalysisFigure.hide()
         self.chartEmbededFigureTwo.hide()
@@ -104,6 +106,7 @@ class MyWindow(QMainWindow):
             self.OpenAIAnalysisFigure.hide()
             self.chartEmbededFigureTwo.hide()
             self.chartEmbededFigureOne.show()
+            self.chartSlide = 0
             return
 
         if (self.chartSlide == 0 and factor == -1) or (self.chartSlide == 2 and factor == 1):
@@ -123,12 +126,13 @@ class MyWindow(QMainWindow):
             self.chartEmbededFigureTwo.hide()
             self.chartEmbededFigureOne.hide()
     
-    def openAIQuery(self, rsi, macd, fib, williams_r, closePriceData, timePeriod):
+    def openAIQuery(self, rsi, macd, fib, williams_r, closePriceData, timePeriod, ticker):
         
         message = [
-            {"role": "user", "content": "You are a technical analyst. You will be given time frame in days, including weekends, technicals in form of a list, with last item being the most recent. Assess if the stock is buy or sell and state rationalle. Assess on the windows of 1 wk, 2 wk, 3 wk, 6 mo, 1 yr, 5 yr."},
+           {"role": "user", "content": "You are a technical analyst and will be given time frame in days, including weekends, technicals and price with last item in each list being most recent. I encourage you to use other analysis not listed in these technicals if you can find or formulate it reliably, do whatever you can to make as high accuracy and realistic an output as possible. I also would like you to factor general investor sentiment and business logic into these conclusions, as well as news and other headlines to decide if the market agrees with your TA. Assess if the stock is buy or sell and state rationalle / cite logic or external resources for the windows of 1wk, 2wk, 3wk, 6mo, 1yr, 5yr. Indicate price targets, upside from current price, and likelihood for these projections. Provide an overall 0-100 percent confidence level for each assessment."},
         ]
         for name, data in [
+            ("TICKER",            ticker),
             ("RSI",               rsi),
             ("MACD",              macd),
             ("FIBONACCI LEVELS",  fib),
@@ -140,8 +144,9 @@ class MyWindow(QMainWindow):
                 "role":    "user",
                 "content": f"{name}: {json.dumps(data)}"
             })
+        
         response = self.client.responses.create(model="gpt-4.1", input=message)
-        self.OpenAIAnalysisFigure.setPlainText(response.output_text)
+        self.OpenAIAnalysisReady.emit(response.output_text)
         print(response.output_text)
 
     def initiateSearch(self):
@@ -181,9 +186,14 @@ class MyWindow(QMainWindow):
             macd = calculateMACD(closePriceData, periodFastMacd, periodSlowMacd, signalPeriodMacd)
             fib = calculateFibonacciRetracements(closePriceData)
             williams_r = calculateWilliamsR(highPriceData, lowPriceData, closePriceData, williamsPeriod)
-            self.openAIQuery(rsi, macd, fib, williams_r, closePriceData, timePeriod)
+            self.OpenAIAnalysisReady.emit("")
+            thread = threading.Thread(
+                target=self.openAIQuery,
+                args=(rsi, macd, fib, williams_r, closePriceData, timePeriod, ticker),
+                daemon=True
+            )
+            thread.start()
         except Exception as e:
-            print(e)
             return
 
         self.figureOne.clear()
