@@ -146,7 +146,7 @@ for ticker in tickers:
     # 0 = Neither bear nor bull nor over extension (ie rsi sitting at 50)
     # -1 = bearish action on the indicator (ie rsi crossing from above 67.5 to below it)
     # -2 = Overextended into sell side (ie rsi resting below 32.5)
-    results = {"rsi": 0, "bbPercent": 0, "stochasticRSI": 0}
+    results = {"rsi": 0, "bbPercent": 0, "stochasticRSIKCrossD": 0}
 
     if ((rsi[-3] > 67.5 and rsi[-1] < 67.5) or (rsi[-2] > 67.5 and rsi[-1] < 67.5)):
         results["rsi"] = -1
@@ -158,9 +158,9 @@ for ticker in tickers:
         results["rsi"] = -2
 
     if ((stochasticRSIK[-3] > stochasticRSID[-3] and stochasticRSIK[-1] < stochasticRSID[-1]) or (stochasticRSIK[-2] > stochasticRSID[-2] and stochasticRSIK[-1] < stochasticRSID[-1])):
-        results["stochasticRSI"] = -1
+        results["stochasticRSIKCrossD"] = -1
     elif ((stochasticRSIK[-3] < stochasticRSID[-3] and stochasticRSIK[-1] > stochasticRSID[-1]) or (stochasticRSIK[-2] < stochasticRSID[-2] and stochasticRSIK[-1] > stochasticRSID[-1])):
-        results["stochasticRSI"] = 1
+        results["stochasticRSIKCrossD"] = 1
 
     if((bbPercent[-3] > .95 and bbPercent[-1] < .95) or (bbPercent[-2] > .95 and bbPercent[-1] < .95)):
         results["bbPercent"] = -1
