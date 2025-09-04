@@ -120,7 +120,7 @@ tickers = [
     "MNST","NFLX","NVDA","NXPI","ORLY","ODFL","ON","PCAR","PLTR","PANW","PAYX","PYPL","PDD","PEP","QCOM","REGN","ROP",
     "ROST","SHOP","SBUX","SNPS","TMUS","TTWO","TSLA","TXN","TRI","TTD","VRSK","VRTX","WBD","WDAY","XEL","ZS",
 
-    "JPM","V","LLY","XOM","MA","JNJ","WMT","PG","BAC","UNH","HD","KO","PFE","CVX","VZ",
+    "GLD", "JPM","V","LLY","XOM","MA","JNJ","WMT","PG","BAC","UNH","HD","KO","PFE","CVX","VZ",
     "MRK","NKE","ABBV","DIS","MCD","SPGI","CRM","T","C","GE","USB","CAT","IBM","ORCL",
     "RTX","BBY","TMO","WFC","UPS","LOW","TJX","CL","SCHW","APD","BSX","BLK","PM","MS",
     "GS","ABT","DD","NOW","TM","MO","LRCX","BIIB","TSCO","PEP","MCO","LVS","EW","CME",
