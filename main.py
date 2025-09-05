@@ -54,7 +54,7 @@ def RSI(data):
     return result
 
 
-def StochRSI(data, rsi):
+def StochasticRSI(data, rsi):
     period = 14
     smooth_k = 3  # smoothing for %K
     smooth_d = 3  # smoothing for %D
@@ -100,7 +100,7 @@ def StochRSI(data, rsi):
 
 def fetchData(ticker):
     t = yf.Ticker(ticker)
-    hist = t.history(period="100d", interval="1d")
+    hist = t.history(period="500d", interval="5d")
     result = {
         "Date": [d.strftime("%Y-%m-%d") for d in hist.index.to_pydatetime()],
         "Open": hist["Open"].tolist(),
@@ -111,6 +111,27 @@ def fetchData(ticker):
     }
     return result
 
+def calcRSICrossover(rsi):
+    if ((rsi[-3] > 67.5 and rsi[-1] < 67.5) or (rsi[-2] > 67.5 and rsi[-1] < 67.5)):
+        return -1
+    elif ((rsi[-3] < 32.5 and rsi[-1] > 32.5) or (rsi[-2] < 32.5 and rsi[-1] > 32.5)):
+        return 1
+    return 0
+
+def calcStochRSICrossover(stochasticRSIK, stochasticRSID):
+    if (((stochasticRSIK[-3] > stochasticRSID[-3]) and (stochasticRSIK[-1] < stochasticRSID[-1])) or ((stochasticRSIK[-2] > stochasticRSID[-2]) and (stochasticRSIK[-1] < stochasticRSID[-1]))):
+        return -1
+    elif (((stochasticRSIK[-3] < stochasticRSID[-3]) and (stochasticRSIK[-1] > stochasticRSID[-1])) or ((stochasticRSIK[-2] < stochasticRSID[-2]) and (stochasticRSIK[-1] > stochasticRSID[-1]))):
+        return 1
+    return 0
+
+def calcBollingerBandsPercentCrossover(bbPercent):
+    if ((bbPercent[-3] > .95 and bbPercent[-1] < .95) or (bbPercent[-2] > .95 and bbPercent[-1] < .95)):
+        return -1
+    elif ((bbPercent[-3] < .05 and bbPercent[-1] > .05) or (bbPercent[-2] < .05 and bbPercent[-1] > .05)):
+        return 1
+    return 0
+
 tickers = [
     # 1. NASDAQ-100 (~100 tickers)
     "ADBE","AMD","ABNB","GOOGL","GOOG","AMZN","AEP","AMGN","ADI","AAPL","AMAT","APP","ARM","ASML","AZN","TEAM","ADSK",
@@ -120,14 +141,14 @@ tickers = [
     "MNST","NFLX","NVDA","NXPI","ORLY","ODFL","ON","PCAR","PLTR","PANW","PAYX","PYPL","PDD","PEP","QCOM","REGN","ROP",
     "ROST","SHOP","SBUX","SNPS","TMUS","TTWO","TSLA","TXN","TRI","TTD","VRSK","VRTX","WBD","WDAY","XEL","ZS",
 
-    "GLD", "JPM","V","LLY","XOM","MA","JNJ","WMT","PG","BAC","UNH","HD","KO","PFE","CVX","VZ",
+    "SPY", "GLD", "JPM","V","LLY","XOM","MA","JNJ","WMT","PG","BAC","UNH","HD","KO","PFE","CVX","VZ",
     "MRK","NKE","ABBV","DIS","MCD","SPGI","CRM","T","C","GE","USB","CAT","IBM","ORCL",
     "RTX","BBY","TMO","WFC","UPS","LOW","TJX","CL","SCHW","APD","BSX","BLK","PM","MS",
     "GS","ABT","DD","NOW","TM","MO","LRCX","BIIB","TSCO","PEP","MCO","LVS","EW","CME",
     "GM","F","KO","SYY","DE","EMR","MMM","CRM","ETN","GD","ICE","KEYS","LIN","NOC","SWKS",
     "RTX","CLX","PH","ITW","STZ","HWM","DHR","SPGI","D","MET","AFL","ALL","CINF","PGR",
     "TRV","AON","AJG","CB","WRB","MMC","J","ZTS","MOH","UHS","XRAY","EW","REG","LB",
-    "ARE","PLD","PSA","CBRE","DLR","CCI","EQIX","SO","DUK","NEE","EXC","XEL","ETR","AEP","CMS","ES",
+    "ARE","PLD","PSA","CBRE","DLR","CCI","EQIX","SO","DUK","NEE","EXC","XEL","ETR","CMS","ES",
     "PEG","DTE","PCG","VLO","PSX","MPC","HES","COP","VTR","ESS","EQR","UDR","AVB","ARE","MAA","DLR"
 ]
 
@@ -137,60 +158,8 @@ for ticker in tickers:
     except Exception as e:
         continue
     rsi=RSI(data)
-    stochasticRSIK, stochasticRSID = StochRSI(data, rsi)
+    stochasticRSIK, stochasticRSID = StochasticRSI(data, rsi)
     bbPercent = BollingerBandsPercent(data)
-    # Keys for the results json
-    #
-    # 2 = Overextended into buy side (ie rsi resting above 67.5)
-    # 1 = Bullish action on the measure (ie rsi crossing from below 32.5 to above it)
-    # 0 = Neither bear nor bull nor over extension (ie rsi sitting at 50)
-    # -1 = bearish action on the indicator (ie rsi crossing from above 67.5 to below it)
-    # -2 = Overextended into sell side (ie rsi resting below 32.5)
-    results = {"rsi": 0, "bbPercent": 0, "stochasticRSIKCrossD": 0}
-
-    if ((rsi[-3] > 67.5 and rsi[-1] < 67.5) or (rsi[-2] > 67.5 and rsi[-1] < 67.5)):
-        results["rsi"] = -1
-    elif ((rsi[-3] < 32.5 and rsi[-1] > 32.5) or (rsi[-2] < 32.5 and rsi[-1] > 32.5)):
-        results["rsi"] = 1
-    elif (rsi[-1] > 67.5):
-        results["rsi"] = 2
-    elif (rsi[-1] < 32.5):
-        results["rsi"] = -2
-
-    if ((stochasticRSIK[-3] > stochasticRSID[-3] and stochasticRSIK[-1] < stochasticRSID[-1]) or (stochasticRSIK[-2] > stochasticRSID[-2] and stochasticRSIK[-1] < stochasticRSID[-1])):
-        results["stochasticRSIKCrossD"] = -1
-    elif ((stochasticRSIK[-3] < stochasticRSID[-3] and stochasticRSIK[-1] > stochasticRSID[-1]) or (stochasticRSIK[-2] < stochasticRSID[-2] and stochasticRSIK[-1] > stochasticRSID[-1])):
-        results["stochasticRSIKCrossD"] = 1
-
-    if((bbPercent[-3] > .95 and bbPercent[-1] < .95) or (bbPercent[-2] > .95 and bbPercent[-1] < .95)):
-        results["bbPercent"] = -1
-    elif ((bbPercent[-3] < .05 and bbPercent[-1] > .05) or (bbPercent[-2] < .05 and bbPercent[-1] > .05)):
-        results["bbPercent"] = 1
-    elif (bbPercent[-1] > .95):
-        results["bbPercent"] = 2
-    elif (bbPercent[-1] < .05):
-        results["bbPercent"] = -2
-
-    percentBullish = 0
-    percentBearish = 0
-    percentNeutral = 0
-    percentRestingHigh = 0
-    percentRestingLow = 0
-    for key, value in results.items():
-        if value == 2:
-            percentRestingHigh += 1
-        elif value == 1:
-            percentBullish += 1
-        elif value == 0:
-            percentNeutral += 1
-        elif value == -1:
-            percentBearish += 1
-        elif value == -2:
-            percentRestingLow += 1
-    percentRestingHigh /= len(results)
-    percentBullish /= len(results)
-    percentNeutral /= len(results)
-    percentBearish /= len(results)
-    percentRestingLow /= len(results)
-
-    print(f"{ticker} summary:\n", results, "\n", f"Percent resting high: {100*percentRestingHigh}\n", f"Percent bullish: {100*percentBullish}\n", f"Percent neutral: {100*percentNeutral}\n", f"Percent bearish: {100*percentBearish}\n", f"Percent resting low: {100*percentRestingLow}\n")
+    results = {"ticker": ticker, "rsi": calcRSICrossover(rsi), "bbPercent": calcBollingerBandsPercentCrossover(bbPercent), "stochasticRSICrossover": calcStochRSICrossover(stochasticRSIK, stochasticRSID)}
+    totalScore = (results["rsi"] + results["bbPercent"] + results["stochasticRSICrossover"])
+    print(results, str(totalScore) + "/3")
