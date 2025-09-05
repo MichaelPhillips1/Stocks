@@ -1,4 +1,5 @@
 import statistics, yfinance as yf
+
 def BollingerBandsPercent(data):
     closes = data["Close"]
     result = []
@@ -16,7 +17,6 @@ def BollingerBandsPercent(data):
         else:
             result.append((closes[i] - lower) / (upper - lower))
     return result
-
 
 def RSI(data):
     closes = data["Close"]
@@ -98,6 +98,21 @@ def StochasticRSI(data, rsi):
 
     return k_values, d_values
 
+def OBV(data):
+    closes = data["Close"]
+    volumes = data["Volume"]
+
+    obv = [0]  # start at zero
+    for i in range(1, len(closes)):
+        if closes[i] > closes[i-1]:
+            obv.append(obv[-1] + volumes[i])
+        elif closes[i] < closes[i-1]:
+            obv.append(obv[-1] - volumes[i])
+        else:
+            obv.append(obv[-1])  # no change
+
+    return obv
+
 def fetchData(ticker):
     t = yf.Ticker(ticker)
     hist = t.history(period="500d", interval="5d")
@@ -111,7 +126,7 @@ def fetchData(ticker):
     }
     return result
 
-def calcRSICrossover(rsi):
+def calcRSITopBottomCrossover(rsi):
     if ((rsi[-3] > 67.5 and rsi[-1] < 67.5) or (rsi[-2] > 67.5 and rsi[-1] < 67.5)):
         return -1
     elif ((rsi[-3] < 32.5 and rsi[-1] > 32.5) or (rsi[-2] < 32.5 and rsi[-1] > 32.5)):
@@ -132,34 +147,78 @@ def calcBollingerBandsPercentCrossover(bbPercent):
         return 1
     return 0
 
-tickers = [
-    # 1. NASDAQ-100 (~100 tickers)
-    "ADBE","AMD","ABNB","GOOGL","GOOG","AMZN","AEP","AMGN","ADI","AAPL","AMAT","APP","ARM","ASML","AZN","TEAM","ADSK",
-    "ADP","AXON","BKR","BIIB","BKNG","AVGO","CDNS","CDW","CHTR","CTAS","CSCO","CCEP","CTSH","CMCSA","CEG","CPRT","CSGP",
-    "COST","CRWD","CSX","DDOG","DXCM","FANG","DASH","EA","EXC","FAST","FTNT","GEHC","GILD","GFS","HON","IDXX","INTC",
-    "INTU","ISRG","KDP","KLAC","KHC","LRCX","LIN","LULU","MAR","MRVL","MELI","META","MCHP","MU","MSFT","MSTR","MDLZ",
-    "MNST","NFLX","NVDA","NXPI","ORLY","ODFL","ON","PCAR","PLTR","PANW","PAYX","PYPL","PDD","PEP","QCOM","REGN","ROP",
-    "ROST","SHOP","SBUX","SNPS","TMUS","TTWO","TSLA","TXN","TRI","TTD","VRSK","VRTX","WBD","WDAY","XEL","ZS",
+def calcOBVChange(obv):
+    changeOne = obv[-1] - obv[-2]
+    changeTwo = obv[-1] - obv[-3]
+    if ((changeOne < 0.02 * abs(obv[-2])) or (changeTwo < 0.02 * abs(obv[-2]))):
+        return -1
+    elif ((changeOne > 0.02 * abs(obv[-2])) or (changeTwo > 0.02 * abs(obv[-2]))):  # >2% jump
+        return 1
+    else:
+        return 0
 
-    "SPY", "GLD", "JPM","V","LLY","XOM","MA","JNJ","WMT","PG","BAC","UNH","HD","KO","PFE","CVX","VZ",
-    "MRK","NKE","ABBV","DIS","MCD","SPGI","CRM","T","C","GE","USB","CAT","IBM","ORCL",
-    "RTX","BBY","TMO","WFC","UPS","LOW","TJX","CL","SCHW","APD","BSX","BLK","PM","MS",
-    "GS","ABT","DD","NOW","TM","MO","LRCX","BIIB","TSCO","PEP","MCO","LVS","EW","CME",
-    "GM","F","KO","SYY","DE","EMR","MMM","CRM","ETN","GD","ICE","KEYS","LIN","NOC","SWKS",
-    "RTX","CLX","PH","ITW","STZ","HWM","DHR","SPGI","D","MET","AFL","ALL","CINF","PGR",
-    "TRV","AON","AJG","CB","WRB","MMC","J","ZTS","MOH","UHS","XRAY","EW","REG","LB",
-    "ARE","PLD","PSA","CBRE","DLR","CCI","EQIX","SO","DUK","NEE","EXC","XEL","ETR","CMS","ES",
-    "PEG","DTE","PCG","VLO","PSX","MPC","HES","COP","VTR","ESS","EQR","UDR","AVB","ARE","MAA","DLR"
+tickers =  [
+    # --- Tech & Semiconductors ---
+    "NVDA","AMD","TSLA","SMCI","MU","ON","WOLF","MRVL","INTC","QCOM",
+    "AVGO","ASML","LRCX","AMAT","KLAC","NXPI","ADI","SWKS","TER","COHR",
+    "ACLS","ALGM","AEHR","UCTT","UCTT","COHR","ONTO","FORM","KLIC","SGH",
+    "LSCC","CDNS","SNPS","ANSS","ADBE","INTU","CRM","ORCL","MSFT","AAPL",
+    "META","GOOG","GOOGL","PANW","ZS","CRWD","DDOG","SNOW","MDB","OKTA",
+    "NET","BILL","APP","DOCN","TEAM","NOW","MNDY","ASAN","HUBS","PATH",
+    "DT","ESTC","SPLK","NTNX","CFLT","TWLO","ZM","SHOP","AFRM","UPST",
+
+    # --- E-Commerce / Consumer Discretionary ---
+    "ABNB","UBER","LYFT","BKNG","ETSY","ROKU","PTON","RIVN","LCID","XPEV",
+    "LI","NIO","BYDDF","MELI","CPNG","JD","BABA","PDD","SE","W","TSCO",
+    "AMZN","TGT","COST","WMT","BBY","HD","LOW","CVNA","KMX","DKNG","PENN",
+    "MGM","LVS","WYNN","EXPE","TRIP","SBUX","CMG","MCD","YUM","DPZ",
+    "ANF","URBN","AEO","CROX","ONON","NKE","LULU","DECK","UAA","SKX",
+
+    # --- Financials & Fintech ---
+    "SQ","PYPL","COIN","HOOD","SOFI","ALLY","AXP","DFS","C","BAC",
+    "JPM","MS","GS","SCHW","CME","ICE","BLK","KKR","BX","CG",
+    "AMP","MTB","FITB","KEY","HBAN","RF","PNC","TFC","ZION","CFR",
+
+    # --- Energy / Materials ---
+    "OXY","DVN","FANG","MRO","APA","HES","PXD","CLR","EOG","CVX",
+    "XOM","COP","SU","CNQ","ENB","TRP","KMI","WMB","OKE","LNG",
+    "FCX","AA","NUE","STLD","CLF","X","VALE","TECK","RIO","SCCO",
+    "CMC","ATI","MT","MOS","CF","NTR","IPI","LXU","ALB","LTHM",
+    "PLL","SGML","LAC","FMC","DD","CE","DOW","EMN","HUN","OLN",
+
+    # --- Industrials / Airlines / EVs ---
+    "CAT","DE","GE","HON","MMM","BA","LMT","RTX","NOC","GD",
+    "DAL","UAL","AAL","LUV","ALK","JBLU","SAVE","HA","CCL","RCL",
+    "NCLH","F","GM","STLA","TM","HMC","VWAGY","TT","EMR","ETN",
+    "ROK","PH","ITW","GWW","FAST","URI","CMI","PCAR","SWK","MAS",
+    "DHI","LEN","TOL","PHM","KBH","MTH","BLDR","OC","EXP","USG",
+
+    # --- Healthcare / Biopharma (liquid, not tiny biotech) ---
+    "VRTX","REGN","BIIB","GILD","MRNA","BNTX","ALNY","INCY","EXAS","ILMN",
+    "DXCM","IDXX","TDOC","PEN","ISRG","EW","ABMD","SYK","ZBH","BSX",
+    "UNH","HUM","CI","ELV","CNC","MOH","DGX","LH","IQV","RGEN",
+    "TECH","BRKR","TMO","DHR","A","WAT","MTD","BIO","QDEL","HOLX",
+
+    # --- Media / Communication Services ---
+    "NFLX","DIS","CMCSA","PARA","WBD","SPOT","TTWO","EA","ROKU","CHTR",
+    "TMUS","VZ","T","DISH","NWSA","NWS","BIDU","IQ","SIRI","WB",
+
+    # --- Utilities / REITs (select high beta relative to sector) ---
+    "NEE","DUK","D","SO","EXC","PEG","ED","AEP","PPL","EIX",
+    "SPG","O","DLR","EQIX","PLD","AMT","CCI","SBAC","VICI","WY"
 ]
 
 for ticker in tickers:
     try:
         data = fetchData(ticker)
+        rsi = RSI(data)
+        stochasticRSIK, stochasticRSID = StochasticRSI(data, rsi)
+        bbPercent = BollingerBandsPercent(data)
+        obv = OBV(data)
+        results = {"ticker": ticker, "rsiTopBottomCrossover": calcRSITopBottomCrossover(rsi),
+                   "bbPercentCrossover": calcBollingerBandsPercentCrossover(bbPercent),
+                   "stochasticRSICrossover": calcStochRSICrossover(stochasticRSIK, stochasticRSID), "obvChange": calcOBVChange(obv)}
+        totalScore = (results["rsiTopBottomCrossover"] + results["bbPercentCrossover"] + results["stochasticRSICrossover"] + results["obvChange"])
+        print(results, str(totalScore) + "/4")
     except Exception as e:
         continue
-    rsi=RSI(data)
-    stochasticRSIK, stochasticRSID = StochasticRSI(data, rsi)
-    bbPercent = BollingerBandsPercent(data)
-    results = {"ticker": ticker, "rsi": calcRSICrossover(rsi), "bbPercent": calcBollingerBandsPercentCrossover(bbPercent), "stochasticRSICrossover": calcStochRSICrossover(stochasticRSIK, stochasticRSID)}
-    totalScore = (results["rsi"] + results["bbPercent"] + results["stochasticRSICrossover"])
-    print(results, str(totalScore) + "/3")
