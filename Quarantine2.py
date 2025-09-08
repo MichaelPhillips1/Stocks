@@ -372,7 +372,7 @@ if __name__ == "__main__":
 
     # ===== Your creds (unchanged) ============================================
     PROJECTX_EMAIL   = "michaelphillips@vt.edu".strip()
-    PROJECTX_API_KEY = "qbCJvY5J9iJZjWh0L21fJ5zZQZ98ewgs3kpUrnWiT/4=".strip()
+    PROJECTX_API_KEY = "0fckibnmSGatm+wER/gg1ZoVP8NReu+gdv7YMtWFzds=".strip()
     BASE = "https://gateway-api-demo.s2f.projectx.com"  # use demo host only
     # ========================================================================
 
