@@ -3,24 +3,6 @@ from AssessmentFunctions import (
     BollingerBandsPercent, RSI, StochasticRSI, BuyOrSellSignal, fetchDataYahoo, fetchDataProjectX
 )
 
-def logResults(results):
-    negative, positive, neutral = 0, 0, 0
-    for key, value in results.items():
-        if isinstance(value, str):
-            continue
-        if value < 0:
-            negative += 1
-        elif value > 0:
-            positive += 1
-        else:
-            neutral += 1
-    print(results)
-    print("Negative:", negative, "Neutral:", neutral, "Positive:", positive)
-
-# =============================================================================
-# ================================ TRADE ENGINE ================================
-# =============================================================================
-
 def practice_trade(
     data,
     bbPercent,
@@ -162,7 +144,6 @@ if __name__ == "__main__":
     #     "ticker": ticker,
     #     "BuyOrSellSignal": last_signal  # 1=Long, -1=Short, 0=None
     # }
-    # logResults(results)
     #
     # summary, trades, signals, _ = practice_trade(
     #     data, bbPercent, rsi_vals, stochK, stochD,
@@ -172,11 +153,9 @@ if __name__ == "__main__":
     #     dollar_stop=250.0,
     #     take_profit_R=2.0,
     # )
-    #
     # print("\n=== PRACTICE SUMMARY ===")
     # print(summary)
     # for element in trades:
     #     if not element['pnl'] == 0.0:
     #         print(element)
-
-    fetchDataProjectX()
+    fetchDataProjectX(limit=40)

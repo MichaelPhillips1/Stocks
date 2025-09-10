@@ -1,112 +1,44 @@
-import statistics, yfinance as yf, requests
-from datetime import datetime, timedelta, timezone
-
-USER_EMAIL = "michaelphillips@vt.edu"
-API_KEY = "0fckibnmSGatm+wER/gg1ZoVP8NReu+gdv7YMtWFzds="
+import statistics, yfinance as yf
+import asyncio, json, requests, websockets
+import time
+from datetime import datetime, timezone
 
 def fetchDataProjectX(limit=40):
-    BASE_URL = "https://api.topstepx.com"
+    BASE_URL    = "https://api.topstepx.com"
+    USER_EMAIL = "michaelphillips@vt.edu"
+    API_KEY = "MFHM2m9c9LN8aj9IKMVwEB/P3K49uwpmnfxRZXiPLro="
     CONTRACT_ID = "CON.F.US.ENQ.U25"
-    LIVE = True
-
-    # 1) login -> bearer token
     auth = requests.post(
         f"{BASE_URL}/api/Auth/loginKey",
-        headers={"accept": "text/plain", "Content-Type": "application/json"},
-        json={"userName": USER_EMAIL, "apiKey": API_KEY},
-        timeout=15
+        headers={"accept":"text/plain","Content-Type":"application/json"},
+        json={"userName": USER_EMAIL, "apiKey": API_KEY}, timeout=15
     )
     auth.raise_for_status()
-    try:
-        token = auth.json()["token"]
-    except Exception:
-        token = auth.text.strip().strip('"')
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    TOKEN = auth.json()["token"]
+    bars = []
+    current_bar = None
+    current_minute = None
+    async def run():
+        async with websockets.connect(f"wss://rtc.topstepx.com/hubs/market?access_token={TOKEN}") as ws:
+            await ws.send('{"protocol":"json","version":1}\x1e')
+            sub_quotes = {
+                "type": 1,
+                "invocationId": "1",
+                "target": "SubscribeContractQuotes",
+                "arguments": [CONTRACT_ID]
+            }
+            await ws.send(json.dumps(sub_quotes) + "\x1e")
+            print(f"Subscribed to {CONTRACT_ID} quotes via hub. Building 1m bars…")
+            async for message in ws:
+                frames = [f for f in message.split("\x1e") if f.strip()]
+                for frame in frames:
+                    if isinstance(frame, bytes):
+                        frame = frame.decode("utf-8", errors="ignore")
+                    frame = frame.strip("\x1e")
+                    jsonFrame = json.loads(frame)
+                    print(jsonFrame)
+    asyncio.run(run())
 
-    # 2) get available contracts for your entitlement FIRST (more reliable than search)
-    #    then fallback to search if needed.
-    cid = None
-
-    # 2a) available (live)
-    try:
-        avail = requests.post(
-            f"{BASE_URL}/api/Contract/available",
-            headers=headers,
-            json={"live": LIVE},
-            timeout=15
-        )
-        avail.raise_for_status()
-        avail_list = avail.json() if isinstance(avail.json(), list) else avail.json().get("contracts", [])
-        # pick ENQ first, then MNQ
-        for c in avail_list:
-            cid_str = str(c.get("id", ""))
-            if ".ENQ." in cid_str:
-                cid = cid_str
-                break
-        if not cid:
-            for c in avail_list:
-                cid_str = str(c.get("id", ""))
-                if ".MNQ." in cid_str:
-                    cid = cid_str;
-                    break
-    except Exception:
-        pass
-
-    # 2b) fallback: search "NQ"
-    if not cid:
-        s = requests.post(
-            f"{BASE_URL}/api/Contract/search",
-            headers=headers,
-            json={"searchText": "NQ", "live": LIVE},
-            timeout=15
-        )
-        s.raise_for_status()
-        contracts = s.json().get("contracts", [])
-        for c in contracts:
-            cid_str = str(c.get("id", ""))
-            if c.get("activeContract") and ".ENQ." in cid_str:
-                cid = cid_str;
-                break
-        if not cid:
-            for c in contracts:
-                cid_str = str(c.get("id", ""))
-                if c.get("activeContract") and ".MNQ." in cid_str:
-                    cid = cid_str;
-                    break
-        # if still nothing, accept any ENQ/MNQ hit
-        if not cid:
-            for c in contracts:
-                cid_str = str(c.get("id", ""))
-                if ".ENQ." in cid_str or ".MNQ." in cid_str:
-                    cid = cid_str;
-                    break
-
-    if not cid:
-        raise RuntimeError("NQ not visible to your entitlement. Print Contract/available() to inspect what's returned.")
-
-    # 3) time window for last N minutes
-    end_time = datetime.now(timezone.utc)
-    start_time = end_time - timedelta(minutes=limit)
-
-    payload = {
-        "contractId": cid,
-        "live": LIVE,
-        "startTime": start_time.isoformat(),
-        "endTime": end_time.isoformat(),
-        "unit": 2,  # Minute
-        "unitNumber": 1,  # 1-minute bars
-        "limit": limit,
-        "includePartialBar": True
-    }
-
-    bars = requests.post(
-        f"{BASE_URL}/api/History/retrieveBars",
-        headers=headers,
-        json=payload,
-        timeout=15
-    )
-    bars.raise_for_status()
-    return bars.json()
 def fetchDataYahoo(ticker, period="500d", interval="5d"):
     t = yf.Ticker(ticker)
     hist = t.history(period=period, interval=interval, auto_adjust=False, actions=False)
