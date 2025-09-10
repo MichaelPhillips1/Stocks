@@ -158,4 +158,4 @@ if __name__ == "__main__":
     # for element in trades:
     #     if not element['pnl'] == 0.0:
     #         print(element)
-    fetchDataProjectX(limit=40)
+    print(fetchDataProjectX(limit=40))

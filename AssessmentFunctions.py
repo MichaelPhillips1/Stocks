@@ -1,43 +1,65 @@
 import statistics, yfinance as yf
-import asyncio, json, requests, websockets
-import time
-from datetime import datetime, timezone
+import requests
+from datetime import datetime, timedelta, timezone
+
 
 def fetchDataProjectX(limit=40):
     BASE_URL    = "https://api.topstepx.com"
     USER_EMAIL = "michaelphillips@vt.edu"
     API_KEY = "MFHM2m9c9LN8aj9IKMVwEB/P3K49uwpmnfxRZXiPLro="
     CONTRACT_ID = "CON.F.US.ENQ.U25"
+    # 1) Authenticate -> JWT
     auth = requests.post(
         f"{BASE_URL}/api/Auth/loginKey",
-        headers={"accept":"text/plain","Content-Type":"application/json"},
-        json={"userName": USER_EMAIL, "apiKey": API_KEY}, timeout=15
+        headers={"accept": "application/json", "Content-Type": "application/json"},
+        json={"userName": USER_EMAIL, "apiKey": API_KEY},
+        timeout=15
     )
     auth.raise_for_status()
-    TOKEN = auth.json()["token"]
-    bars = []
-    current_bar = None
-    current_minute = None
-    async def run():
-        async with websockets.connect(f"wss://rtc.topstepx.com/hubs/market?access_token={TOKEN}") as ws:
-            await ws.send('{"protocol":"json","version":1}\x1e')
-            sub_quotes = {
-                "type": 1,
-                "invocationId": "1",
-                "target": "SubscribeContractQuotes",
-                "arguments": [CONTRACT_ID]
-            }
-            await ws.send(json.dumps(sub_quotes) + "\x1e")
-            print(f"Subscribed to {CONTRACT_ID} quotes via hub. Building 1m bars…")
-            async for message in ws:
-                frames = [f for f in message.split("\x1e") if f.strip()]
-                for frame in frames:
-                    if isinstance(frame, bytes):
-                        frame = frame.decode("utf-8", errors="ignore")
-                    frame = frame.strip("\x1e")
-                    jsonFrame = json.loads(frame)
-                    print(jsonFrame)
-    asyncio.run(run())
+    token = auth.json()["token"]
+
+    # 2) Build a generous time window and limit to last N
+    end = datetime.now(timezone.utc)
+    # use a large window to cover weekends/holidays; the server still respects `limit`
+    start = end - timedelta(days=3)
+
+    payload = {
+        "contractId": CONTRACT_ID,
+        "live": False,  # <- historical pull
+        "startTime": start.isoformat().replace("+00:00", "Z"),
+        "endTime": end.isoformat().replace("+00:00", "Z"),
+        "unit": 2,  # 2 = Minute
+        "unitNumber": 1,  # 1-minute bars
+        "limit": int(limit),  # last N bars from the window
+        "includePartialBar": True  # include the open/partial bar
+    }
+
+    r = requests.post(
+        f"{BASE_URL}/api/History/retrieveBars",
+        headers={
+            "accept": "application/json",  # both work; prod often prefers JSON
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}"
+        },
+        json=payload,
+        timeout=30
+    )
+
+    # Helpful diagnostics for 4xx: show server message instead of a bare raise_for_status
+    if not r.ok:
+        try:
+            err = r.json()
+        except Exception:
+            err = {"raw": r.text}
+        raise RuntimeError(f"[{r.status_code}] retrieveBars failed: {err}")
+
+    data = r.json()
+    if not data.get("success", False):
+        raise RuntimeError(f"retrieveBars error: {data.get('errorCode')} {data.get('errorMessage')}")
+
+    bars = data.get("bars", [])
+    bars.sort(key=lambda b: b.get("t", ""))
+    return bars[-int(limit):]
 
 def fetchDataYahoo(ticker, period="500d", interval="5d"):
     t = yf.Ticker(ticker)
