@@ -17,12 +17,8 @@ def fetchDataProjectX(limit=40):
     )
     auth.raise_for_status()
     token = auth.json()["token"]
-
-    # 2) Build a generous time window and limit to last N
     end = datetime.now(timezone.utc)
-    # use a large window to cover weekends/holidays; the server still respects `limit`
     start = end - timedelta(days=3)
-
     payload = {
         "contractId": CONTRACT_ID,
         "live": False,  # <- historical pull
@@ -33,7 +29,6 @@ def fetchDataProjectX(limit=40):
         "limit": int(limit),  # last N bars from the window
         "includePartialBar": True  # include the open/partial bar
     }
-
     r = requests.post(
         f"{BASE_URL}/api/History/retrieveBars",
         headers={
@@ -44,19 +39,7 @@ def fetchDataProjectX(limit=40):
         json=payload,
         timeout=30
     )
-
-    # Helpful diagnostics for 4xx: show server message instead of a bare raise_for_status
-    if not r.ok:
-        try:
-            err = r.json()
-        except Exception:
-            err = {"raw": r.text}
-        raise RuntimeError(f"[{r.status_code}] retrieveBars failed: {err}")
-
     data = r.json()
-    if not data.get("success", False):
-        raise RuntimeError(f"retrieveBars error: {data.get('errorCode')} {data.get('errorMessage')}")
-
     bars = data.get("bars", [])
     bars.sort(key=lambda b: b.get("t", ""))
     return bars[-int(limit):]
