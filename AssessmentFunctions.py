@@ -24,8 +24,8 @@ def fetchDataProjectX(limit=40):
         "live": False,  # <- historical pull
         "startTime": start.isoformat().replace("+00:00", "Z"),
         "endTime": end.isoformat().replace("+00:00", "Z"),
-        "unit": 2,  # 2 = Minute
-        "unitNumber": 1,  # 1-minute bars
+        "unit": 1,  # 2 = Minute, 1 = Second
+        "unitNumber": 15,  # X Minute or second bars
         "limit": int(limit),  # last N bars from the window
         "includePartialBar": True  # include the open/partial bar
     }
@@ -170,31 +170,24 @@ def OBV(data):
             obv.append(obv[-1])
     return obv
 
-def BuyOrSellSignal(bb, k, d, low=0.30, high=0.70):
-    if not bb or not k or not d:
-        return 0
-    if len(bb) < 2 or len(k) < 2 or len(d) < 2:
-        return 0
+def BuyOrSellSignal(bb, stochK, stochD, rsi):
+    bbSign = 0
+    rsiSign = 0
 
-    b0 = bb[-1]
-    k1, d1 = k[-1], d[-1]
-    k0, d0 = k[-2], d[-2]
+    for i in range(-5, 0):
+        if bb[i-1] > .95 and bb[i - 1] > bb[i]:
+            bbSign = -1
+        elif bb[i-1] < .05 and bb[i - 1] < bb[i]:
+            bbSign = 1
 
-    if (b0 is None or k1 is None or d1 is None or k0 is None or d0 is None):
-        return 0
+    for i in range(-5, 0):
+        if rsi[i-1] > .65 and rsi[i - 1] > rsi[i]:
+            rsiSign = -1
+        elif rsi[i-1] < .35 and rsi[i - 1] < rsi[i]:
+            rsiSign = 1
 
-    # SHORT: BB% > .90 and bearish cross (K from >= D to < D) while ABOVE deadzone
-    if (b0 > 0.90 and
-        k0 >= d0 and k1 < d1 and
-        k0 > high and d0 > high and
-        k1 > high and d1 > high):
+    if(bbSign == rsiSign == -1):
         return -1
-
-    # LONG: BB% < .10 and bullish cross (K from <= D to > D) while BELOW deadzone
-    if (b0 < 0.10 and
-        k0 <= d0 and k1 > d1 and
-        k0 < low and d0 < low and
-        k1 < low and d1 < low):
+    elif(bbSign == rsiSign == 1):
         return 1
-
     return 0

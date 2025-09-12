@@ -1,7 +1,5 @@
 import time
-from AssessmentFunctions import (
-    BollingerBandsPercent, RSI, StochasticRSI, fetchDataProjectX
-)
+from AssessmentFunctions import BollingerBandsPercent, RSI, StochasticRSI, BuyOrSellSignal, fetchDataProjectX
 
 while True:
     time.sleep(1)
@@ -17,3 +15,5 @@ while True:
     rsi = RSI(data)
     stochK, stochD = StochasticRSI(data, rsi)
     bbPercent = BollingerBandsPercent(data)
+    signal = BuyOrSellSignal(bbPercent, stochK, stochD, rsi)
+    print(signal)
