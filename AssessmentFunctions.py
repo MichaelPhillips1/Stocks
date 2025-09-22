@@ -7,7 +7,7 @@ def fetchDataProjectX(limit=40):
     BASE_URL    = "https://api.topstepx.com"
     USER_EMAIL = "michaelphillips@vt.edu"
     API_KEY = "MFHM2m9c9LN8aj9IKMVwEB/P3K49uwpmnfxRZXiPLro="
-    CONTRACT_ID = "CON.F.US.ENQ.U25"
+    CONTRACT_ID = "CON.F.US.ENQ.Z25"
     # 1) Authenticate -> JWT
     auth = requests.post(
         f"{BASE_URL}/api/Auth/loginKey",
@@ -25,7 +25,7 @@ def fetchDataProjectX(limit=40):
         "startTime": start.isoformat().replace("+00:00", "Z"),
         "endTime": end.isoformat().replace("+00:00", "Z"),
         "unit": 1,  # 2 = Minute, 1 = Second
-        "unitNumber": 15,  # X Minute or second bars
+        "unitNumber": 5,  # X Minute or second bars
         "limit": int(limit),  # last N bars from the window
         "includePartialBar": True  # include the open/partial bar
     }
@@ -170,24 +170,27 @@ def OBV(data):
             obv.append(obv[-1])
     return obv
 
-def BuyOrSellSignal(bb, stochK, stochD, rsi):
-    bbSign = 0
-    rsiSign = 0
+def BuyOrSellSignal(stoch_k, stoch_d):
+    """
+    Pure Stochastic signal.
+    Buy when %K crosses ABOVE %D (bullish cross)
+    Sell when %K crosses BELOW %D (bearish cross)
+    """
+    n = min(len(stoch_k), len(stoch_d))
+    if n < 2 or stoch_k[-1] is None or stoch_d[-1] is None:
+        return 0
 
-    for i in range(-5, 0):
-        if bb[i-1] > .95 and bb[i - 1] > bb[i]:
-            bbSign = -1
-        elif bb[i-1] < .05 and bb[i - 1] < bb[i]:
-            bbSign = 1
+    k_prev, k_now = stoch_k[-2], stoch_k[-1]
+    d_prev, d_now = stoch_d[-2], stoch_d[-1]
 
-    for i in range(-5, 0):
-        if rsi[i-1] > .65 and rsi[i - 1] > rsi[i]:
-            rsiSign = -1
-        elif rsi[i-1] < .35 and rsi[i - 1] < rsi[i]:
-            rsiSign = 1
+    # --- BUY: Bullish cross ---
+    if k_prev is not None and d_prev is not None:
+        if k_prev < d_prev and k_now > d_now:
+            return 1
 
-    if(bbSign == rsiSign == -1):
-        return -1
-    elif(bbSign == rsiSign == 1):
-        return 1
+    # --- SELL: Bearish cross ---
+    if k_prev is not None and d_prev is not None:
+        if k_prev > d_prev and k_now < d_now:
+            return -1
+
     return 0
