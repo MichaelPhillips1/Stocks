@@ -170,27 +170,9 @@ def OBV(data):
             obv.append(obv[-1])
     return obv
 
-def BuyOrSellSignal(stoch_k, stoch_d):
-    """
-    Pure Stochastic signal.
-    Buy when %K crosses ABOVE %D (bullish cross)
-    Sell when %K crosses BELOW %D (bearish cross)
-    """
-    n = min(len(stoch_k), len(stoch_d))
-    if n < 2 or stoch_k[-1] is None or stoch_d[-1] is None:
-        return 0
-
-    k_prev, k_now = stoch_k[-2], stoch_k[-1]
-    d_prev, d_now = stoch_d[-2], stoch_d[-1]
-
-    # --- BUY: Bullish cross ---
-    if k_prev is not None and d_prev is not None:
-        if k_prev < d_prev and k_now > d_now:
-            return 1
-
-    # --- SELL: Bearish cross ---
-    if k_prev is not None and d_prev is not None:
-        if k_prev > d_prev and k_now < d_now:
-            return -1
-
+def BuyOrSellSignal(bb):
+    if bb[-1] < 0:
+        return 1
+    elif bb[-1] > 1:
+        return -1
     return 0

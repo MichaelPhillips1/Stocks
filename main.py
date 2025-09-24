@@ -3,6 +3,7 @@ from AssessmentFunctions import BollingerBandsPercent, RSI, StochasticRSI, BuyOr
 
 p=0
 side=0
+tot = 0
 while True:
     time.sleep(1)
     fetchedData = fetchDataProjectX(limit=1000)
@@ -27,7 +28,11 @@ while True:
         elif signal != side:
             if side == 1:  # was long
                 print("PnL:", data["Close"][-1] - p)
+                tot += data["Close"][-1] - p
+                print("tot:", tot)
             elif side == -1:  # was short
                 print("PnL:", p - data["Close"][-1])
+                tot += p - data["Close"][-1]
+                print("tot:", tot)
             side = signal
             p = data["Close"][-1]
